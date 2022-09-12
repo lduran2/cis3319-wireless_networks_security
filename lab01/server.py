@@ -76,7 +76,7 @@ SERVER_CHARSET = 'utf-8'
 # name of file containing the key
 KEY_FILE = 'key.txt'
 # prompt for input
-PROMPT = '> '
+PROMPT = 'server> '
 # ends the input stream
 SENTINEL = 'exit'
 
@@ -93,6 +93,7 @@ def receiveThread(server):
             msg_string = msg_bytes.decode(SERVER_CHARSET)
             # print the message
             print(file=stderr)
+            print('Received: ', end='', file=stderr, flush=True)
             print(msg_string)
             # print new prompt
             print(file=stderr, end=PROMPT, flush=True)

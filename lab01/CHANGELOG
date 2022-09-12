@@ -1,4 +1,7 @@
 CHANGELOG :
+    v1.0.2 - 2022-09-12t15:27Q
+        added module name->prompt, 'Received: '->recv'd
+
     v1.0.1 - 2022-09-12t15:24Q
         prompt-related to STDERR
 
