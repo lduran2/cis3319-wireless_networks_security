@@ -1,4 +1,7 @@
 CHANGELOG :
+    v1.0.1 - 2022-09-12t15:24Q
+        prompt-related to STDERR
+
     v1.0.0 - 2022-09-12t15:12Q
         working 2-way server/client
 

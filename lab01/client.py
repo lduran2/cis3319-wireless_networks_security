@@ -2,6 +2,7 @@
 # standard libraries
 import socket
 import logging
+from sys import stderr
 from _thread import start_new_thread
 # local library crypto
 from crypto import KeyManager, DES
@@ -81,10 +82,10 @@ def receiveThread(client):
             # convert to a string
             msg_string = msg_bytes.decode(SERVER_CHARSET)
             # print the message
-            print()
+            print(file=stderr)
             print(msg_string)
             # print new prompt
-            print(end=PROMPT, flush=True)
+            print(file=stderr, end=PROMPT, flush=True)
         except:
             continue
     # end while True
