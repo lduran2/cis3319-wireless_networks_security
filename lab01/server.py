@@ -1,6 +1,7 @@
 
-# standard library socket
+# standard libraries
 import socket
+import logging
 
 # local library crypto
 from crypto import KeyManager, DES
@@ -67,10 +68,12 @@ class Server:
 
 
 # address whereat to listen
-LISTEN_ADDR = 'localhost'
-LISTEN_PORT = 9999
+SERVER_ADDR = 'localhost'
+SERVER_PORT = 9999
+
 # name of file containing the key
 KEY_FILE = 'key.txt'
+
 # prompt for input
 PROMPT = '> '
 # ends the input stream
@@ -79,8 +82,12 @@ SENTINEL = 'exit'
 
 # run the server until SENTINEL is given
 if __name__ == '__main__':
+    # configure the logger
+    logging.basicConfig(level=logging.INFO)
+
     # create a server
-    server = Server(LISTEN_ADDR, LISTEN_PORT)
+    logging.info(f'listening to {SERVER_ADDR}:{SERVER_PORT} . . .')
+    server = Server(SERVER_ADDR, SERVER_PORT)
     # read in the key word
     key = KeyManager.read_key(KEY_FILE)
     # generate the DES key for encryption

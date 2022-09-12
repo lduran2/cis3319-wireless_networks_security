@@ -1,6 +1,7 @@
 
-# standard library socket
+# standard libraries
 import socket
+import logging
 # local library crypto
 from crypto import KeyManager, DES
 
@@ -59,7 +60,7 @@ class Client:
 
 
 # import connection address and port
-from server import LISTEN_ADDR as CONNECT_ADDR, LISTEN_PORT as CONNECT_PORT
+from server import SERVER_ADDR, SERVER_PORT
 # name of file containing the key
 KEY_FILE = 'key.txt'
 # prompt for input
@@ -70,8 +71,12 @@ SENTINEL = 'exit'
 
 # run the client until SENTINEL is given
 if __name__ == '__main__':
+    # configure the logger
+    logging.basicConfig(level=logging.INFO)
+
     # create a client
-    client = Client(CONNECT_ADDR, CONNECT_PORT)
+    logging.info(f'connecting to {SERVER_ADDR}:{SERVER_PORT} . . .')
+    client = Client(SERVER_ADDR, SERVER_PORT)
     # read in the key word
     key = KeyManager().read_key(KEY_FILE)
     # generate the DES key for encryption
