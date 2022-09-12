@@ -34,7 +34,19 @@ def bitize(byts: bytes) -> 'list[int]':
     bitize bytes
     """
     bits = []
+
     # TODO: your code here
+
+    # for each byt
+    for byt in byts:
+        # loop through the bits
+        for i in range(8,0,-1):
+            # pop off less significant bits
+            shift = (byt >> (i - 1))
+            # store the new least significant bit
+            bits.append(shift & 1)
+        # end for i in range(8,0,-1)
+    # end for byt in byts
 
     return bits
 
