@@ -6,15 +6,16 @@ import socket
 from crypto import KeyManager, DES
 
 class Server:
-    # the maximum number of connections
-    MAX_N_CONNS = 1
-
     '''
     A simple socket server.
     '''
+
+    # the maximum number of connections
+    MAX_N_CONNS = 1
+
     def __init__(self, addr: str, port: int, buffer_size=1024):
         '''
-        Creates the socket server.
+        Allocates space for the socket server and initializes it.
         @param addr: str = address whereat to listen (without port)
         @param port: int = port of address whereat to listen
         @param buffer_size: int = default buffer size for receiving
@@ -65,13 +66,19 @@ class Server:
 # end class Server
 
 
-if __name__ == '__main__':
-    # address whereat to listen
-    LISTEN_ADDR = 'localhost'
-    LISTEN_PORT = 9999
-    # name of file containing the key
-    KEY_FILE = 'key.txt'
+# address whereat to listen
+LISTEN_ADDR = 'localhost'
+LISTEN_PORT = 9999
+# name of file containing the key
+KEY_FILE = 'key.txt'
+# prompt for input
+PROMPT = '> '
+# ends the input stream
+SENTINEL = 'exit'
 
+
+# run the server until SENTINEL is given
+if __name__ == '__main__':
     # create a server
     server = Server(LISTEN_ADDR, LISTEN_PORT)
     # read in the key word
@@ -83,9 +90,9 @@ if __name__ == '__main__':
     while True:
         # TODO: your code here
 
-        # accept user input until 'exit'
-        msg = input('> ')
-        if msg == 'exit':
+        # accept user input until SENTINEL given
+        msg = input(PROMPT)
+        if msg == SENTINEL:
             break
         
         # TODO: your code here

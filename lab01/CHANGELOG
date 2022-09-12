@@ -1,4 +1,7 @@
 CHANGELOG :
+    v0.2.0 - 2022-09-12t12:08Q
+        documented client.py, server.py
+
     v0.1.0 - 2022-09-12t12:08Q
         documented server.py
 
