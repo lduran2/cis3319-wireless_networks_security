@@ -2,6 +2,7 @@
 # standard libraries
 import socket
 import logging
+from _thread import start_new_thread
 # local library crypto
 from crypto import KeyManager, DES
 
@@ -59,14 +60,35 @@ class Client:
 # end class Client
 
 
-# import connection address and port
-from server import SERVER_ADDR, SERVER_PORT
+# import connection address, port, and character encoding
+from server import SERVER_ADDR, SERVER_PORT, SERVER_CHARSET
 # name of file containing the key
 KEY_FILE = 'key.txt'
 # prompt for input
 PROMPT = '> '
 # ends the input stream
 SENTINEL = 'exit'
+
+
+def receiveThread(client):
+    while True:
+        try:
+            # read in from the client
+            msg_bytes = client.recv()
+            # if empty message, skip
+            if (len(msg_bytes) <= 0):
+                continue
+            # convert to a string
+            msg_string = msg_bytes.decode(SERVER_CHARSET)
+            # print the message
+            print()
+            print(msg_string)
+            # print new prompt
+            print(end=PROMPT, flush=True)
+        except:
+            continue
+    # end while True
+# end def receiveThread(client)
 
 
 # run the client until SENTINEL is given
@@ -83,13 +105,20 @@ if __name__ == '__main__':
     # and reverse key for decryption
     des = DES(key)
 
+    # start the receiving thread
+    start_new_thread(receiveThread, (client,))
+
     while True:
         # accept user input until SENTINEL given
-        msg = input(PROMPT)
-        if msg == SENTINEL:
+        msg_string = input(PROMPT)
+        if msg_string == SENTINEL:
             break
 
         # TODO: your code here
+        # convert new input message to bytes
+        msg_bytes = msg_string.encode(SERVER_CHARSET)
+        # send the message
+        client.send(msg_bytes)
     # end while True
 
     # close the server

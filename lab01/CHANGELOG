@@ -1,4 +1,7 @@
 CHANGELOG :
+    v1.0.0 - 2022-09-12t15:12Q
+        working 2-way server/client
+
     v0.2.0 - 2022-09-12t12:08Q
         documented client.py, server.py
 

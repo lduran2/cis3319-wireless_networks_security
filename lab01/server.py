@@ -2,6 +2,7 @@
 # standard libraries
 import socket
 import logging
+from _thread import start_new_thread
 
 # local library crypto
 from crypto import KeyManager, DES
@@ -33,7 +34,7 @@ class Server:
         # bind it to the address whereat to listen
         self.s.bind((self.addr, self.port))
         # start listening
-        self.s.listen(MAX_N_CONNS)
+        self.s.listen(Server.MAX_N_CONNS)
         # store the connected socket and update the address
         self.conn, self.addr = self.s.accept()
 
@@ -70,14 +71,34 @@ class Server:
 # address whereat to listen
 SERVER_ADDR = 'localhost'
 SERVER_PORT = 9999
-
+SERVER_CHARSET = 'utf-8'
 # name of file containing the key
 KEY_FILE = 'key.txt'
-
 # prompt for input
 PROMPT = '> '
 # ends the input stream
 SENTINEL = 'exit'
+
+
+def receiveThread(server):
+    while True:
+        try:
+            # read in from the server
+            msg_bytes = server.recv()
+            # if empty message, skip
+            if (len(msg_bytes) <= 0):
+                continue
+            # convert to a string
+            msg_string = msg_bytes.decode(SERVER_CHARSET)
+            # print the message
+            print()
+            print(msg_string)
+            # print new prompt
+            print(end=PROMPT, flush=True)
+        except:
+            continue
+    # end while True
+# end def receiveThread(server)
 
 
 # run the server until SENTINEL is given
@@ -94,15 +115,22 @@ if __name__ == '__main__':
     # and reverse key for decryption
     des = DES(key)
 
+    # start the receiving thread
+    start_new_thread(receiveThread, (server,))
+
     while True:
         # TODO: your code here
 
         # accept user input until SENTINEL given
-        msg = input(PROMPT)
-        if msg == SENTINEL:
+        msg_string = input(PROMPT)
+        if msg_string == SENTINEL:
             break
         
         # TODO: your code here
+        # convert new input message to bytes
+        msg_bytes = msg_string.encode(SERVER_CHARSET)
+        # send the message
+        server.send(msg_bytes)
     # end while True
 
     # close the server
