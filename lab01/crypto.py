@@ -268,14 +268,20 @@ class DES:
         return: 16 * (48bits key)
         """
 
-        cipherKey = permute(n=64, m=56, raw_seq=key, table=DES.KEY_DROP)
-        leftKey, rightKey = split(n=56, m=28, inBlockN=cipherKey)
+        n = 64
+        permuteM = 56
+        splitM = n//2
+
+        cipherKey = permute(n=n, m=permuteM, raw_seq=key, table=DES.KEY_DROP)
+        leftKey, rightKey = split(n=permuteM, m=splitM, inBlockN=cipherKey)
+
+        RoundKeys16x48 = [None] * 16
 
         for i_round in range(0, 16):
-            shiftLeft(n=28, blockN=leftKey, numOfShifts=ShiftTable16[i_round])
-            shiftLeft(n=28, blockN=rightKey, numOfShifts=ShiftTable16[i_round])
-            preRoundKey = combine(n=28, m=56, leftBlockN=leftKey, rightBlockN=rightKey)
-            RoundKeys16x48 = permute(n=56, m=48, raw_seq=preRoundKey, table=DES.KEY_COMPRESSION)
+            leftKey = shiftLeft(n=splitM, blockN=leftKey, numOfShifts=ShiftTable16[i_round])
+            rightKey = shiftLeft(n=splitM, blockN=rightKey, numOfShifts=ShiftTable16[i_round])
+            preRoundKey = combine(n=splitM, m=permuteM, leftBlockN=leftKey, rightBlockN=rightKey)
+            RoundKeys16x48[i_round] = permute(n=permuteM, m=48, raw_seq=preRoundKey, table=DES.KEY_COMPRESSION)
         return RoundKeys16x48
 
     @staticmethod
@@ -323,7 +329,12 @@ class DES:
         block: 64 bits.
         return: 64 bits.
         """
-        # TODO: your code here
+        N_ROUNDS = 8
+        n = 64
+        m = n//2
+        for i_round in range(0, N_ROUNDS):
+            leftKey, rightKey = split(n=n, m=m, inBlockN=cipherKey)
+        # next i_round
         return [] # just a placeholder
 
     def dec_block(self, block: 'list[int]') -> 'list[int]':

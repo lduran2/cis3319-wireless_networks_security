@@ -106,6 +106,7 @@ if __name__ == '__main__':
     # generate the DES key for encryption
     # and reverse key for decryption
     des = DES(key)
+    print([sum([des.keys[0][i]==L for (i,L) in enumerate(k)]) for k in des.keys])
 
     # start the receiving thread
     start_new_thread(receiveThread, (client,))
