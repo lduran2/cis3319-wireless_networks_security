@@ -54,10 +54,11 @@ def debitize(bits: Iterable[int]) -> bytes:
     """
     debbitize a list of bits
     """
-    if len(bits) % 8 != 0:
+    quo, rem = divmod(len(bits), 8)
+    if rem != 0:
         raise ValueError('bits length is not a multiple of 8')
 
-    byts = []
+    byts = [sum(b*2**(7-i) for (i, b) in enumerate(bits[8*k : 8*(k+1)])) for k in range(0, quo)]
 
     # TODO: your code here
     return byts
