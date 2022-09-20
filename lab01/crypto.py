@@ -88,7 +88,7 @@ def xor(bits1: Iterable[int], bits2: Iterable[int]) -> 'list[int]':
     xor two bits
     """
     # TODO: your code here
-    return [] # just a placeholder
+    return [ (b1^b2) for b1, b2 in zip(bits1, bits2)]
 
 def split(n: int, m: int, inBlockN: 'list[int]') -> 'tuple(list[int])':
     '''
@@ -294,7 +294,7 @@ class DES:
         """
         # TODO: your code here
 
-        return [] # just a placeholder
+        return R # just a placeholder
 
     @staticmethod  
     def mixer(L: 'list[int]', R: 'list[int]', sub_key: 'list[int]') -> 'tuple[list[int]]':
@@ -329,13 +329,7 @@ class DES:
         block: 64 bits.
         return: 64 bits.
         """
-        N_ROUNDS = 8
-        n = 64
-        m = n//2
-        for i_round in range(0, N_ROUNDS):
-            leftKey, rightKey = split(n=n, m=m, inBlockN=cipherKey)
-        # next i_round
-        return [] # just a placeholder
+        return self.cry_block(block, self.keys)
 
     def dec_block(self, block: 'list[int]') -> 'list[int]':
         """
@@ -344,7 +338,25 @@ class DES:
         return: 64 bits
         """
         # TODO: your code here
-        return [] # just a placeholder
+        return self.cry_block(block, self.reverse_keys)
+
+    def cry_block(self, block: 'list[int]', keys) -> 'list[int]':
+        """
+        Encrypt/decrypt a block of 64 bits (8 bytes).
+        block: 64 bits.
+        return: 64 bits.
+        """
+        N_ROUNDS = 8
+        n = 64
+        m = n//2
+
+        leftHalf, rightHalf = split(n=n, m=m, inBlockN=block)
+
+        for i_round in range(0, N_ROUNDS):
+            rightHalf, leftHand = xor(DES.f(rightHalf, keys[i_round]), leftHalf), rightHalf
+        # next i_round
+        
+        return combine(n=m, m=n, leftBlockN=leftHalf, rightBlockN=rightHalf)
 
     def encrypt(self, msg_str: str) -> bytes:
         """
@@ -353,7 +365,7 @@ class DES:
         *Inputs are guaranteed to have a length divisible by 8.
         """
         # TODO: your code here
-        return b'' # just a placeholder
+        return debbitize(self.enc_block(bitize(msg_str[:64])))
     
     def decrypt(self, msg_bytes: bytes) -> str:
         """
@@ -361,4 +373,4 @@ class DES:
         Similar to encrypt.
         """
         # TODO: your code here
-        return '' # just a placeholder
+        return debbitize(self.dec_block(bitize(msg_bytes[:64])))

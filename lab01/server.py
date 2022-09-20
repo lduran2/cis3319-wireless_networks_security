@@ -131,8 +131,10 @@ if __name__ == '__main__':
         # TODO: your code here
         # convert new input message to bytes
         msg_bytes = msg_string.encode(SERVER_CHARSET)
+        # encryption
+        cyp_bytes = des.encrypt(msg_bytes)
         # send the message
-        server.send(msg_bytes)
+        server.send(cyp_bytes)
     # end while True
 
     # close the server

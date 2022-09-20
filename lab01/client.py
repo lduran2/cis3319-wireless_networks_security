@@ -106,7 +106,6 @@ if __name__ == '__main__':
     # generate the DES key for encryption
     # and reverse key for decryption
     des = DES(key)
-    print([sum([des.keys[0][i]==L for (i,L) in enumerate(k)]) for k in des.keys])
 
     # start the receiving thread
     start_new_thread(receiveThread, (client,))
@@ -120,8 +119,10 @@ if __name__ == '__main__':
         # TODO: your code here
         # convert new input message to bytes
         msg_bytes = msg_string.encode(SERVER_CHARSET)
+        # encryption
+        cyp_bytes = des.encrypt(msg_bytes)
         # send the message
-        client.send(msg_bytes)
+        client.send(cyp_bytes)
     # end while True
 
     # close the server
