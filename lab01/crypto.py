@@ -74,12 +74,14 @@ def hex2bit(hex_str: str) -> list:
     """
     return bitize(bytes.fromhex(hex_str))
 
-def permute(raw_seq: Iterable, table: Iterable[int]) -> list:
+def permute(n: int, m: int, raw_seq: Iterable, table: Iterable[int]) -> list[list[int]]:
     """
     permute bits with a table
     """
     # TODO: your code here
-    return [] # just a placeholder
+    # e.g. permuteBlock = permute(n=64, m=56, raw_seq=key, table=KEY_DROP)
+    return [raw_seq[:n][k] for k in table][:m]
+# end def permute(n: int, m: int, raw_seq: Iterable, table: Iterable[int])
 
 def xor(bits1: Iterable[int], bits2: Iterable[int]) -> 'list[int]':
     """
@@ -87,6 +89,54 @@ def xor(bits1: Iterable[int], bits2: Iterable[int]) -> 'list[int]':
     """
     # TODO: your code here
     return [] # just a placeholder
+
+def split(n: int, m: int, inBlockN: 'list[list[int]]') -> 'tuple(list[list[int]])':
+    '''
+    Splits block inBlockN of size n into leftmost and rightmost
+    blocks of size m.
+    @param n: int = size of original block
+    @param m: int = size of split blocks
+    @param inBlockN: list[list[int]] = block to split
+    @return `tuple(list[list[int]])` representing split leftmost
+    and rightmost blocks of size m
+    '''
+    return (
+        [row[:m] for row in inBlockN],
+        [row[m:n] for row in inBlockN]
+    )
+# end def split(n: int, m: int, inBlockN: 'list[list[int]]')
+
+def shiftLeft(n: int, blockN : 'list[list[int]]', numOfShifts: int):
+    '''
+    Performs `numOfShifts` left shifts on each block of size n.
+    @param n: int = size of block
+    @param blockN: list[list[int]] = block to shift
+    @param numOfShifts: int = number of left shifts to perform
+    '''
+    for i in range(0, numOfShifts):
+        Temp = blockN[0]
+        for j in range(1, n):
+            blockN[j - 1] = blockN[j]
+        # next j
+        blockN[n-1] = Temp
+    # next i
+# end def shiftLeft(n: int, blockN : 'list[list[int]]', numOfShifts: int)
+
+def combine(n: int, m: int, leftBlockN: 'list[list[int]]', rightBlockN: 'list[list[int]]') -> 'list[list[int]]':
+    '''
+    Combines leftKeyN and rightKeyN of size n into a block of size 
+    blocks of size m.
+    @param n: int = size of original blocks
+    @param m: int = size of combined block
+    @param leftBlockN: list[list[int]] = left half to combine
+    @param rightBlockN: list[list[int]] = right half to combine
+    @return `list[list[int]]` representing join of leftBlockN and rightBlockN
+    '''
+    return [
+        (left_row[:n] + right_row[:n])[:m]
+        for (left_row, right_row) in zip(leftBlockN, rightBlockN)
+    ]
+# end def combine(n: int, m: int, leftKeyN: 'list[list[int]]', rightKeyN: 'list[list[int]]')
 
 class DES:
 
@@ -125,6 +175,7 @@ class DES:
         28, 20, 12, 4, 27, 19, 11, 3
     ]
 
+    # this is the ShiftTable in the algorithm
     BIT_SHIFT = [
         1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1
     ]
@@ -220,16 +271,21 @@ class DES:
     ]
 
     @staticmethod
-    def key_generation(key: 'list[int]') -> 'list[list[int]]':
+    def key_generation(key: 'list[int]', ShiftTable16=BIT_SHIFT) -> 'list[list[int]]':
         """
         raw_key: 64 bits
         return: 16 * (48bits key)
         """
 
-        keys: 'list[list[int]]' = []
-        # TODO: your code here
+        cipherKey = permute(n=64, m=56, raw_seq=key, table=DES.KEY_DROP)
+        leftBlock, rightBlock = split(n=56, m=28, inBlockN=[cipherKey])
 
-        return keys
+        for i_round in range(0, 16):
+            shiftLeft(n=28, blockN=leftBlock, numOfShifts=ShiftTable16[i_round])
+            shiftLeft(n=28, blockN=rightBlock, numOfShifts=ShiftTable16[i_round])
+            preRoundKey = combine(n=28, m=56, leftBlockN=leftKey, rightBlockN=rightKey)
+            RoundKeys16x48 = permute(n=56, m=48, raw_key=preRoundKey, table=DES.KEY_COMPRESSION)
+        return RoundKeys16x48
 
     @staticmethod
     def f(R: 'list[int]', key: 'list[int]') -> 'list[int]':
@@ -264,7 +320,7 @@ class DES:
 
     def __init__(self, raw_key: bytes) -> None:
         # for encryption use
-        self.keys = DES.key_generation(bitize(raw_key))
+        self.keys = DES.key_generation(key=bitize(raw_key))
         
         # for decryption use
         self.reverse_keys = deepcopy(self.keys)
