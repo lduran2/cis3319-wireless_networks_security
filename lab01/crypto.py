@@ -295,7 +295,7 @@ class DES:
         """
         # TODO: your code here
 
-        return R # just a placeholder
+        return [ r for r, k in zip(R, key) ] # just a placeholder
 
     @staticmethod  
     def mixer(L: 'list[int]', R: 'list[int]', sub_key: 'list[int]') -> 'tuple[list[int]]':
@@ -354,7 +354,7 @@ class DES:
         leftHalf, rightHalf = split(n=n, m=m, inBlockN=block)
 
         for i_round in range(0, N_ROUNDS):
-            rightHalf, leftHand = xor(DES.f(rightHalf, keys[i_round]), leftHalf), rightHalf
+            rightHalf, leftHand = (xor(DES.f(rightHalf, keys[i_round]), leftHalf), rightHalf)
         # next i_round
         
         return combine(n=m, m=n, leftBlockN=leftHalf, rightBlockN=rightHalf)
@@ -366,12 +366,12 @@ class DES:
         *Inputs are guaranteed to have a length divisible by 8.
         """
         # TODO: your code here
-        return debbitize(self.enc_block(bitize(msg_str[:64])))
+        return bytes(debitize(self.enc_block(bitize(msg_str[:64]))))
     
-    def decrypt(self, msg_bytes: bytes) -> str:
+    def decrypt(self, msg_bytes: bytes, enc: str = 'utf-8') -> str:
         """
         Decrypt the whole message.
         Similar to encrypt.
         """
         # TODO: your code here
-        return debbitize(self.dec_block(bitize(msg_bytes[:64])))
+        return bytes(debitize(self.dec_block(bitize(msg_bytes[:64])))).decode(enc)

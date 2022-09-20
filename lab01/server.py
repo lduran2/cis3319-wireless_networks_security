@@ -2,6 +2,7 @@
 # standard libraries
 import socket
 import logging
+import traceback
 from sys import stderr
 from _thread import start_new_thread
 
@@ -81,7 +82,8 @@ PROMPT = 'server> '
 SENTINEL = 'exit'
 
 
-def receiveThread(server):
+def receiveThread(server, des):
+    old_tb = None
     while True:
         try:
             # read in from the server
@@ -91,13 +93,23 @@ def receiveThread(server):
                 continue
             # convert to a string
             msg_string = msg_bytes.decode(SERVER_CHARSET)
-            # print the message
+            # decrypt the message
+            dec_string = des.decrypt(msg_bytes, enc=SERVER_CHARSET)
+            # log the message received
             print(file=stderr)
-            print('Received: ', end='', file=stderr, flush=True)
-            print(msg_string)
+            logging.info(f'Received: {msg_string}')
+            # print the decrypted message
+            print('Decrypted: ', end='', file=stderr, flush=True)
+            print(dec_string)
             # print new prompt
             print(file=stderr, end=PROMPT, flush=True)
-        except:
+        except Exception as e:
+            tb = traceback.format_exc()
+            # don't repeat the trackback
+            if (tb != old_tb):
+                print(file=stderr)
+                logging.error(tb)
+            old_tb = tb
             continue
     # end while True
 # end def receiveThread(server)
@@ -118,7 +130,7 @@ if __name__ == '__main__':
     des = DES(key)
 
     # start the receiving thread
-    start_new_thread(receiveThread, (server,))
+    start_new_thread(receiveThread, (server, des))
 
     while True:
         # TODO: your code here
