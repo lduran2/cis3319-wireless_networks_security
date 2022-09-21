@@ -1,0 +1,21 @@
+CHANGELOG :
+    v1.1.0 - 2022-09-12t16:30Q
+        implemented bitize
+
+    v1.0.2 - 2022-09-12t15:27Q
+        added module name->prompt, 'Received: '->recv'd
+
+    v1.0.1 - 2022-09-12t15:24Q
+        prompt-related to STDERR
+
+    v1.0.0 - 2022-09-12t15:12Q
+        working 2-way server/client
+
+    v0.2.0 - 2022-09-12t12:08Q
+        documented client.py, server.py
+
+    v0.1.0 - 2022-09-12t12:08Q
+        documented server.py
+
+    v0.0.0 - 2022-08-30t00:00Q
+        starter files

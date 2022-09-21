@@ -1,0 +1,5 @@
+# compressed archives
+*.zip
+
+# Python bytecode
+__pycache__/
