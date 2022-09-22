@@ -78,11 +78,15 @@ def receiveThread(node, des, encoding):
             # if empty message, skip
             if (len(msg_bytes) <= 0):
                 continue
+            # ignore any illegal bytes
+            legal_msg_bytes = bytes(b for b in msg_bytes if b in range(256))
             # decrypt the message
-            dec_string = des.decrypt(msg_bytes, encoding=encoding)
+            dec_string = des.decrypt(legal_msg_bytes, encoding=encoding)
             # log the message received
             print(file=stderr)
-            logging.info(f'Received: {bit2hex(msg_bytes)}')
+            print(len(legal_msg_bytes))
+            print(legal_msg_bytes)
+            logging.info(f'Received: {bit2hex(legal_msg_bytes)}')
             # print the decrypted message
             print('Decrypted: ', end='', file=stderr, flush=True)
             print(dec_string)
@@ -126,9 +130,9 @@ def main(connecting_status: str, node_init: 'Callable[[addr, port], Node]', addr
         
         # TODO: your code here
         # encryption
-        print(msg_string)
         cyp_bytes = des.encrypt(msg_string, encoding=encoding)
         # send the message
+        print(cyp_bytes)
         node.send(cyp_bytes)
     # end while True
 
