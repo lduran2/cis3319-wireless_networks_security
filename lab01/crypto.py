@@ -444,6 +444,8 @@ class DES:
             leftBlock, rightBlock = (rightBlock, xor(leftBlock, f_R_key))
         # next k
 
+        # reverse the last swap
+        leftBlock, rightBlock = rightBlock, leftBlock
         # recombine after rounds
         rounds_result = combine(n=HALF_N, m=N, leftBlockN=leftBlock, rightBlockN=rightBlock)
 
