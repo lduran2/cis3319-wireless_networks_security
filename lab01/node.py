@@ -69,7 +69,7 @@ KEY_FILE = 'key.txt'
 SENTINEL = 'exit'
 
 
-def receiveThread(node, des, encoding):
+def receiveThread(node, des, encoding, prompt):
     old_tb = None
     while True:
         try:
@@ -79,19 +79,19 @@ def receiveThread(node, des, encoding):
             if (len(msg_bytes) <= 0):
                 continue
             # ignore any illegal bytes
-            legal_msg_bytes = bytes(b for b in msg_bytes if b in range(256))
+            msg_bytes = bytes(b for b in msg_bytes if b in range(256))
             # decrypt the message
-            dec_string = des.decrypt(legal_msg_bytes, encoding=encoding)
+            dec_string = des.decrypt(msg_bytes, encoding=encoding)
             # log the message received
             print(file=stderr)
-            print(len(legal_msg_bytes))
-            print(legal_msg_bytes)
-            logging.info(f'Received: {bit2hex(legal_msg_bytes)}')
+            print(file=stderr)
+            logging.info(f'Received: {msg_bytes}')
             # print the decrypted message
             print('Decrypted: ', end='', file=stderr, flush=True)
             print(dec_string)
             # print new prompt
-            print(file=stderr, end=PROMPT, flush=True)
+            print(file=stderr)
+            print(file=stderr, end=prompt, flush=True)
         except Exception as e:
             tb = traceback.format_exc()
             # don't repeat the trackback
@@ -118,7 +118,7 @@ def main(connecting_status: str, node_init: 'Callable[[addr, port], Node]', addr
     des = DES(key)
 
     # start the receiving thread
-    start_new_thread(receiveThread, (node, des, encoding))
+    start_new_thread(receiveThread, (node, des, encoding, prompt))
 
     while True:
         # TODO: your code here
@@ -132,7 +132,7 @@ def main(connecting_status: str, node_init: 'Callable[[addr, port], Node]', addr
         # encryption
         cyp_bytes = des.encrypt(msg_string, encoding=encoding)
         # send the message
-        print(cyp_bytes)
+        logging.info(f'Sending cypher: {cyp_bytes}')
         node.send(cyp_bytes)
     # end while True
 

@@ -503,7 +503,6 @@ class DES:
         # TODO: your code here
         # decrypt bytes, giving plaintext bytes
         plaintext_bytes = self.crypt_bytes(msg_bytes, self.dec_block)
-        print('plaintext_bytes:', plaintext_bytes)
         # convert to string
         plaintext_string = str(plaintext_bytes, encoding)
         return plaintext_string
@@ -523,9 +522,6 @@ class DES:
         # pad if number of bytes % 8
         msg_bytes_pad = (bytearray(needed_pad))
         padded_msg_bytes = msg_bytes + msg_bytes_pad
-        total_size = len(padded_msg_bytes)
-        print('padded_msg_bytes:', padded_msg_bytes)
-        print('total size:', len(padded_msg_bytes))
         if (DEBUG_MODE):
             print('padding needed:', (8 - (len(msg_bytes) % 8)))
             print('padding created:', len(msg_bytes_pad))
@@ -544,9 +540,5 @@ class DES:
         # next k
         # convert back to bytes
         cry_all_bytes = bytes(debitize(cry_all_bits))
-        # remove extra characters
-        cry_trim = cry_all_bytes[:total_size]
-        print('cryption all bytes:', padded_msg_bytes)
-        print('cryption trim:', padded_msg_bytes)
-        return cry_trim
+        return cry_all_bytes
     
