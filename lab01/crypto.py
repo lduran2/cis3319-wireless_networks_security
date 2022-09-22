@@ -320,6 +320,11 @@ class DES:
 
         # expand the right block with the expansion D-box
         expanded_R = permute(n=N, m=N_EXPAND, raw_seq=R, table=DES.D_EXPANSION)
+        # whiten expanded_R by XORing with the key
+        white_R = xor(expanded_R, key)
+
+        # use S-boxes to perform actual "mixing"
+        # this creates confusion
 
         return [ r for r, k in zip(R, key) ] # just a placeholder
 
