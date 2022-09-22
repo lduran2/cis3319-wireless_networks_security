@@ -304,6 +304,17 @@ class DES:
                 print(f'generate_key round #{i_round}: ', debitize(RoundKeys16x48[i_round]))
         return RoundKeys16x48
 
+    # bits input into S-box
+    S_IP_BITS = 6
+    # rows in S-boxes are defined by bits R[[0,-1]]
+    II_ROW_BITS = [0, (S_IP_BITS-1)]
+    # padding for rows
+    I_ROW_PAD = [0]*(8 - len(II_ROW_BITS))
+    # columns in S-boxes are defined by bits R[1:-1]
+    II_COL_BITS = range(1,II_ROW_BITS[1])
+    # padding for columns
+    I_COL_PAD = [0]*(8 - len(II_COL_BITS))
+
     @staticmethod
     def f(R: 'list[int]', key: 'list[int]') -> 'list[int]':
         """
@@ -326,7 +337,32 @@ class DES:
         # use S-boxes to perform actual "mixing"
         # this creates confusion
 
-        return [ r for r, k in zip(R, key) ] # just a placeholder
+        # allocate space for S-mixed R
+        # the values in S-boxes are bytes, not bits
+        S_R_bytes = [0] * len(DES.S)
+
+        # R is then divided into 8, 6-bit chunks
+        for i_S, k in enumerate(range(0, N_EXPAND, DES.S_IP_BITS)):
+            # get the next 6-bit chunk
+            R_6bit = white_R[k:(k + DES.S_IP_BITS)]
+            # extract row and column bits
+            i_row_bits = [R_6bit[ii] for ii in DES.II_ROW_BITS]
+            i_col_bits = [R_6bit[ii] for ii in DES.II_COL_BITS]
+            # convert row and col from bits
+            i_row = debitize(DES.I_ROW_PAD + i_row_bits)[0]
+            i_col = debitize(DES.I_COL_PAD + i_col_bits)[0]
+            # store the 4-bit value from next S-box from R_6bit
+            S_R_bytes[i_S] = DES.S[i_S][i_row][i_col]
+        # next k
+
+        # bitize S_R again
+        S_R_bits = bitize(S_R_bytes)
+
+        # perform the straight permutation
+        # S-mixed R is now the original size
+        R_out = permute(n=N, m=N, raw_seq=S_R_bits, table=DES.D_STRAIGHT)
+
+        return R_out
 
     @staticmethod  
     def mixer(L: 'list[int]', R: 'list[int]', sub_key: 'list[int]') -> 'tuple[list[int]]':
@@ -375,7 +411,7 @@ class DES:
             # mixer mixes f(R, K) into L
             # swapper swaps L, R
             left_block, right_block = (right_block,
-                xor(left_block, DES.f(right_block, self.key(k)))
+                xor(left_block, DES.f(right_block, self.keys[k]))
             )
         # next k
 
