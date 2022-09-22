@@ -404,20 +404,21 @@ class DES:
         # apply initial permutation
         block_IP = permute(n=N, m=N, raw_seq=block, table=DES.IP)
         # split the block into left and right blocks
-        left_block, right_block = split(n=N, m=HALF_N, inBlockN=block_IP)
+        leftBlock, rightBlock = split(n=N, m=HALF_N, inBlockN=block_IP)
 
         # perform rounds
         for k in range(N_ROUNDS):
             # mixer mixes f(R, K) into L
             # swapper swaps L, R
-            left_block, right_block = (right_block,
-                xor(left_block, DES.f(right_block, self.keys[k]))
+            leftBlock, rightBlock = (rightBlock,
+                xor(leftBlock, DES.f(rightBlock, self.keys[k]))
             )
         # next k
 
-        result = block_IP
+        # recombine after rounds
+        rounds_result = combine(n=HALF_N, m=N, leftBlockN=leftBlock, rightBlockN=rightBlock)
 
-        block_FP = permute(n=N, m=N, raw_seq=result, table=DES.FP)
+        block_FP = permute(n=N, m=N, raw_seq=rounds_result, table=DES.FP)
 
         if (DEBUG_MODE):
             print("Before IP:", ''.join(str(i) for i in block))
