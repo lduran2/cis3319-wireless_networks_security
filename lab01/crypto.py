@@ -3,7 +3,7 @@ from copy import deepcopy
 import random
 from typing import Iterable
 
-DEBUG_MODE = False
+DEBUG_MODE = True
 
 class KeyManager:
     @staticmethod
@@ -301,7 +301,7 @@ class DES:
             RoundKeys16x48[i_round] = permute(n=permuteM, m=48, raw_seq=preRoundKey, table=DES.KEY_COMPRESSION)
             # print the RoundKey generated if in debug mode
             if (DEBUG_MODE):
-                print(debitize(RoundKeys16x48[i_round]))
+                print(f'generate_key round #{i_round}: ', debitize(RoundKeys16x48[i_round]))
         return RoundKeys16x48
 
     @staticmethod
@@ -349,7 +349,22 @@ class DES:
         block: 64 bits.
         return: 64 bits.
         """
-        return self.cry_block(block, self.keys)
+        N_ROUNDS = 16
+
+        # apply initial permutation
+        block_IP = permute(n=64, m=64, raw_seq=block, table=DES.IP)
+
+        result = block_IP
+
+        block_FP = permute(n=64, m=64, raw_seq=result, table=DES.FP)
+
+        if (DEBUG_MODE):
+            print("Before IP:", ''.join(str(i) for i in block))
+            print("After  IP:", ''.join(str(i) for i in block_IP))
+            print("After  FP:", ''.join(str(i) for i in block_FP))
+        # end if (DEBUG_MODE)
+
+        return block_FP
 
     def dec_block(self, block: 'list[int]') -> 'list[int]':
         """
