@@ -3,7 +3,7 @@ from copy import deepcopy
 import random
 from typing import Iterable
 
-DEBUG_MODE = True
+DEBUG_MODE = False
 
 class KeyManager:
     @staticmethod
