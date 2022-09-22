@@ -487,8 +487,8 @@ class DES:
         # convert message to bytes
         msg_bytes = msg_str.encode(encoding)
         # encrypt these bytes, giving cypher
-        cyp_all_bytes = self.crypt_bytes(msg_bytes, self.enc_block)
-        return cyp_all_bytes
+        cypher = self.crypt_bytes(msg_bytes, self.enc_block)
+        return cypher
     
     def decrypt(self, msg_bytes: bytes, encoding: str='utf-8') -> str:
         """
@@ -496,9 +496,11 @@ class DES:
         Similar to encrypt.
         """
         # TODO: your code here
-        # pad if number of bytes % 8
-        msg_bytes_pad = (bytes(0) * (8 - (len(msg_bytes) % 8)))
-        padded_msg_bytes = msg_bytes + msg_bytes_pad
+        # decrypt bytes, giving plaintext bytes
+        plaintext_bytes = self.crypt_bytes(msg_bytes, self.dec_block)
+        # convert to string
+        plaintext_string = plaintext_bytes.decode(encoding)
+        return plaintext_string
 
     def crypt_bytes(self, msg_bytes: bytes, callback: 'Callable[[DES, list[int], list[int]]') -> bytes:
         """
