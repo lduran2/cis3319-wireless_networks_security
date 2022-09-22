@@ -3,6 +3,7 @@ from copy import deepcopy
 import random
 from typing import Iterable
 
+DEBUG_MODE = False
 
 class KeyManager:
     @staticmethod
@@ -133,6 +134,8 @@ def combine(n: int, m: int, leftBlockN: 'list[int]', rightBlockN: 'list[int]') -
 class DES:
 
     # initial permutation
+    # reminder that Chapter 6 explanation is 1-indexed
+    # whereas python is 0-indexed
     IP = [
         57, 49, 41, 33, 25, 17, 9, 1,
         59, 51, 43, 35, 27, 19, 11, 3,
@@ -283,6 +286,9 @@ class DES:
             rightKey = shiftLeft(n=splitM, blockN=rightKey, numOfShifts=ShiftTable16[i_round])
             preRoundKey = combine(n=splitM, m=permuteM, leftBlockN=leftKey, rightBlockN=rightKey)
             RoundKeys16x48[i_round] = permute(n=permuteM, m=48, raw_seq=preRoundKey, table=DES.KEY_COMPRESSION)
+            # print the roundKey generated if in debug mode
+            if (DEBUG_MODE):
+                print(debitize(RoundKeys16x48[i_round]))
         return RoundKeys16x48
 
     @staticmethod
