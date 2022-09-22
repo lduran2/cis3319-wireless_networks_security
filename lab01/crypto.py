@@ -485,7 +485,26 @@ class DES:
         """
         # TODO: your code here
         # convert message to bytes
-        return bytes(debitize(self.enc_block(bitize(msg_str[:64]))))
+        msg_bytes = msg_str.encode(encoding)
+        # pad if number of bytes % 8
+        msg_bytes_pad = (bytes(0) * (8 - (len(msg_bytes) % 8)))
+        padded_msg_bytes = msg_bytes + msg_bytes_pad
+        # initialize the bits of the bytes to return
+        cyp_all_bits = []
+        # loop through each 8-byte segment (64-bit block), encrypting it
+        for k in range(0, len(padded_msg_bytes), 8):
+            # get the segment
+            msg_block = padded_msg_bytes[k:(k + 8)]
+            # convert to bits
+            msg_bits = bitize(msg_block)
+            # encrypt the bits
+            cyp_bits = self.enc_block(msg_bits)
+            # append to bits to return
+            cyp_all_bits.extend(cyp_bits)
+        # next k
+        # convert back to bytes
+        cyp_all_bytes = debitize(cyp_all_bits)
+        return cyp_all_bytes
     
     def decrypt(self, msg_bytes: bytes, encoding: str='utf-8') -> str:
         """
