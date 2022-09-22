@@ -96,6 +96,9 @@ def permute(raw_seq: Iterable, table: Iterable[int], n: int = None, m: int = Non
     # use indices in table as indices for raw_seq
     # e.g. permuteBlock = permute(n=64, m=56, raw_seq=key, table=KEY_DROP)
     sliced_seq = raw_seq[:n]
+    if (DEBUG_MODE):
+        print('expected length:', n)
+        print('actual length:', len(sliced_seq))
     permutation = [sliced_seq[k] for k in table]
     return permutation[:m]
 # end def permute(n: int, m: int, raw_seq: Iterable, table: Iterable[int])
@@ -512,8 +515,11 @@ class DES:
         *Inputs are guaranteed to have a length divisible by 8.
         """
         # pad if number of bytes % 8
-        msg_bytes_pad = (bytes(0) * (8 - (len(msg_bytes) % 8)))
+        msg_bytes_pad = (bytearray(8 - (len(msg_bytes) % 8)))
         padded_msg_bytes = msg_bytes + msg_bytes_pad
+        if (DEBUG_MODE):
+            print('padding needed:', (8 - (len(msg_bytes) % 8)))
+            print('padding created:', len(msg_bytes_pad))
         # initialize the bits of the bytes to return
         cry_all_bits = []
         # loop through each 8-byte segment (64-bit block), encrypting it
