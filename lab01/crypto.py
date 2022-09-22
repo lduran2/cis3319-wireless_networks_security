@@ -76,11 +76,23 @@ def hex2bit(hex_str: str) -> list:
     """
     return bitize(bytes.fromhex(hex_str))
 
-def permute(n: int, m: int, raw_seq: Iterable, table: Iterable[int]) -> list[int]:
+def permute(raw_seq: Iterable, table: Iterable[int], n: int = None, m: int = None) -> list[int]:
     """
     permute bits with a table
+    @param raw_seq: Iterable = block before permutation
+    @param table: Iterable[int] =
+        table of indices to use in permutation
+    @param n: int = size of  input block (default len(raw_seq))
+    @param m: int = size of output block (default len(table))
     """
     # TODO: your code here
+    # set defaults
+    if (n is None):
+        n = len(raw_seq)
+    if (m is None):
+        m = len(table)
+
+    # use indices in table as indices for raw_seq
     # e.g. permuteBlock = permute(n=64, m=56, raw_seq=key, table=KEY_DROP)
     return [raw_seq[:n][k] for k in table][:m]
 # end def permute(n: int, m: int, raw_seq: Iterable, table: Iterable[int])
@@ -286,7 +298,7 @@ class DES:
             rightKey = shiftLeft(n=splitM, blockN=rightKey, numOfShifts=ShiftTable16[i_round])
             preRoundKey = combine(n=splitM, m=permuteM, leftBlockN=leftKey, rightBlockN=rightKey)
             RoundKeys16x48[i_round] = permute(n=permuteM, m=48, raw_seq=preRoundKey, table=DES.KEY_COMPRESSION)
-            # print the roundKey generated if in debug mode
+            # print the RoundKey generated if in debug mode
             if (DEBUG_MODE):
                 print(debitize(RoundKeys16x48[i_round]))
         return RoundKeys16x48

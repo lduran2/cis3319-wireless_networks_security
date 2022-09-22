@@ -10,6 +10,7 @@ permuted_bits = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
 
 def test_bitize():
     result_bits: list[int] = bitize(byts)
+
     assert len(bits)==len(result_bits)
     for bit, result_bit in zip(bits, result_bits):
         assert bit == result_bit
@@ -18,6 +19,7 @@ def test_bitize():
 
 def test_debitize():
     result_byts: list[int] = debitize(bits)
+
     assert len(byts)==len(result_byts)
     for byt, result_byt in zip(byts, result_byts):
         assert byt == result_byt
@@ -28,6 +30,8 @@ def test_permute():
 
     result_bits = permute(bits, DES.IP)
 
+    print(len(permuted_bits), len(result_bits))
+    assert len(permuted_bits)==len(result_bits)
     for permuted_bit, result_bit in zip(permuted_bits, result_bits):
         assert permuted_bit == result_bit
 
