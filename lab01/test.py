@@ -44,7 +44,6 @@ def test_key_gen() -> None:
 
     keys = DES.key_generation(key)
     last_key = bit2hex(keys[-1])
-    print([bit2hex(key) for key in keys])
     assert last_key == "181c5d75c66d"
     print("key_gen tested")
       
@@ -55,7 +54,7 @@ def test_enc_block() -> None:
     des = DES(key)
     result = des.enc_block(bitize(plaintext))
     result = bit2hex(result).upper()
-    print('result:', result)
+    # print(result)
 
     assert result == "C0B7A8D05F3A829C"
     print("enc_block tested")
@@ -97,9 +96,9 @@ test_permute()
 
 test_key_gen()
 test_enc_block()
-# test_encrypt()
+test_encrypt()
 test_dec_block()
-# test_decrypt()
+test_decrypt()
 
 
 print("All tests passed!" + "\033[0m")
