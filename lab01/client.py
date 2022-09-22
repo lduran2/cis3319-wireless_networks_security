@@ -84,7 +84,7 @@ def receiveThread(client, des):
             # convert to a string
             msg_string = msg_bytes.decode(SERVER_CHARSET)
             # decrypt the message
-            dec_string = des.decrypt(msg_bytes, enc=SERVER_CHARSET)
+            dec_string = des.decrypt(msg_bytes, encoding=SERVER_CHARSET)
             # log the message received
             print(file=stderr)
             logging.info(f'Received : {msg_string}')
