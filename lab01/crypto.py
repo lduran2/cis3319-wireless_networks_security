@@ -307,12 +307,19 @@ class DES:
     @staticmethod
     def f(R: 'list[int]', key: 'list[int]') -> 'list[int]':
         """
+        The heart of DES[,] the DES function (Mal-Sarkar & Yu, 2015).
         f function
-        R: 32 bits
+        R: 32 bits = right block
         key: 48 bits
         return: 32 bits
         """
         # TODO: your code here
+
+        N = 32
+        N_EXPAND = 48
+
+        # expand the right block with the expansion D-box
+        expanded_R = permute(n=N, m=N_EXPAND, raw_seq=R, table=DES.D_EXPANSION)
 
         return [ r for r, k in zip(R, key) ] # just a placeholder
 
@@ -350,13 +357,26 @@ class DES:
         return: 64 bits.
         """
         N_ROUNDS = 16
+        N = 64
+        HALF_N = N//2
 
         # apply initial permutation
-        block_IP = permute(n=64, m=64, raw_seq=block, table=DES.IP)
+        block_IP = permute(n=N, m=N, raw_seq=block, table=DES.IP)
+        # split the block into left and right blocks
+        left_block, right_block = split(n=N, m=HALF_N, inBlockN=block_IP)
+
+        # perform rounds
+        for k in range(N_ROUNDS):
+            # mixer mixes f(R, K) into L
+            # swapper swaps L, R
+            left_block, right_block = (right_block,
+                xor(left_block, DES.f(right_block, self.key(k)))
+            )
+        # next k
 
         result = block_IP
 
-        block_FP = permute(n=64, m=64, raw_seq=result, table=DES.FP)
+        block_FP = permute(n=N, m=N, raw_seq=result, table=DES.FP)
 
         if (DEBUG_MODE):
             print("Before IP:", ''.join(str(i) for i in block))
