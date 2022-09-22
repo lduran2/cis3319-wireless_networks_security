@@ -95,7 +95,9 @@ def permute(raw_seq: Iterable, table: Iterable[int], n: int = None, m: int = Non
 
     # use indices in table as indices for raw_seq
     # e.g. permuteBlock = permute(n=64, m=56, raw_seq=key, table=KEY_DROP)
-    return [raw_seq[:n][k] for k in table][:m]
+    sliced_seq = raw_seq[:n]
+    permutation = [sliced_seq[k] for k in table]
+    return permutation[:m]
 # end def permute(n: int, m: int, raw_seq: Iterable, table: Iterable[int])
 
 def xor(bits1: Iterable[int], bits2: Iterable[int]) -> 'list[int]':

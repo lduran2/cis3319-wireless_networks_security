@@ -9,17 +9,14 @@ from _thread import start_new_thread
 # local library crypto
 from crypto import KeyManager, DES
 
-class Server:
+class Node:
     '''
-    A simple socket server.
+    A simple socket node.
     '''
 
-    # the maximum number of connections
-    MAX_N_CONNS = 1
-
-    def __init__(self, addr: str, port: int, buffer_size=1024):
+    def __init__(self, addr: str, port: int, connect_func: "Callable[[Node], NoneType]", buffer_size=1024):
         '''
-        Allocates space for the socket server and initializes it.
+        Allocates space for the socket node and initializes it.
         @param addr: str = address whereat to listen (without port)
         @param port: int = port of address whereat to listen
         @param buffer_size: int = default buffer size for receiving
@@ -33,12 +30,8 @@ class Server:
         # create the stream socket to serve
         # using IPv4 or string hostnames
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # bind it to the address whereat to listen
-        self.s.bind((self.addr, self.port))
-        # start listening
-        self.s.listen(Server.MAX_N_CONNS)
-        # store the connected socket and update the address
-        self.conn, self.addr = self.s.accept()
+        # apply network function
+        connect_func(self)
 
     def send(self, msg_bytes: bytes):
         '''
@@ -67,34 +60,28 @@ class Server:
         Closes the backing socket.
         '''
         self.conn.close()
-# end class Server
+# end class Node
 
 
-# address whereat to listen
-SERVER_ADDR = 'localhost'
-SERVER_PORT = 9999
-SERVER_CHARSET = 'utf-8'
 # name of file containing the key
 KEY_FILE = 'key.txt'
-# prompt for input
-PROMPT = 'server> '
 # ends the input stream
 SENTINEL = 'exit'
 
 
-def receiveThread(server, des):
+def receiveThread(node, des, encoding):
     old_tb = None
     while True:
         try:
-            # read in from the server
-            msg_bytes = server.recv()
+            # read in from the node
+            msg_bytes = node.recv()
             # if empty message, skip
             if (len(msg_bytes) <= 0):
                 continue
             # convert to a string (just for printing!)
-            msg_string = msg_bytes.decode(SERVER_CHARSET)
+            msg_string = msg_bytes.decode(encoding)
             # decrypt the message
-            dec_string = des.decrypt(msg_bytes, encoding=SERVER_CHARSET)
+            dec_string = des.decrypt(msg_bytes, encoding=encoding)
             # log the message received
             print(file=stderr)
             logging.info(f'Received: {msg_string}')
@@ -112,17 +99,16 @@ def receiveThread(server, des):
             old_tb = tb
             continue
     # end while True
-# end def receiveThread(server)
+# end def receiveThread(node, des, encoding)
 
-
-# run the server until SENTINEL is given
-if __name__ == '__main__':
+# run the node until SENTINEL is given
+def main(connecting_status: str, node_init: 'Callable[[addr, port], Node]', addr: str, port: int, encoding: str, prompt: str):
     # configure the logger
     logging.basicConfig(level=logging.INFO)
 
-    # create a server
-    logging.info(f'listening to {SERVER_ADDR}:{SERVER_PORT} . . .')
-    server = Server(SERVER_ADDR, SERVER_PORT)
+    # create a node
+    logging.info(f'{connecting_status} to {addr}:{port} . . .')
+    node = node_init(addr, port)
     # read in the key word
     key = KeyManager.read_key(KEY_FILE)
     # generate the DES key for encryption
@@ -130,23 +116,24 @@ if __name__ == '__main__':
     des = DES(key)
 
     # start the receiving thread
-    start_new_thread(receiveThread, (server, des))
+    start_new_thread(receiveThread, (node, des, encoding))
 
     while True:
         # TODO: your code here
 
         # accept user input until SENTINEL given
-        msg_string = input(PROMPT)
+        msg_string = input(prompt)
         if msg_string == SENTINEL:
             break
         
         # TODO: your code here
         # encryption
-        cyp_bytes = des.encrypt(msg_string, encoding=SERVER_CHARSET)
+        print(msg_string)
+        cyp_bytes = des.encrypt(msg_string, encoding=encoding)
         # send the message
-        server.send(cyp_bytes)
+        node.send(cyp_bytes)
     # end while True
 
-    # close the server
-    server.close()
-# end if __name__ == '__main__'
+    # close the node
+    node.close()
+# end main(connecting_status: str, node_init: 'Callable[[addr, port], Node]', addr: str, port: int, encoding: str, prompt: str)
