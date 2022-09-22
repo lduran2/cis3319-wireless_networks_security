@@ -94,7 +94,7 @@ def receiveThread(server, des):
             # convert to a string
             msg_string = msg_bytes.decode(SERVER_CHARSET)
             # decrypt the message
-            dec_string = des.decrypt(msg_bytes, enc=SERVER_CHARSET)
+            dec_string = des.decrypt(msg_bytes, encoding=SERVER_CHARSET)
             # log the message received
             print(file=stderr)
             logging.info(f'Received: {msg_string}')
@@ -144,7 +144,7 @@ if __name__ == '__main__':
         # convert new input message to bytes
         msg_bytes = msg_string.encode(SERVER_CHARSET)
         # encryption
-        cyp_bytes = des.encrypt(msg_bytes)
+        cyp_bytes = des.encrypt(msg_bytes, encoding=SERVER_CHARSET)
         # send the message
         server.send(cyp_bytes)
     # end while True

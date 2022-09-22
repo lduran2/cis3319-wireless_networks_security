@@ -477,16 +477,17 @@ class DES:
         return block_FP
     # end def cry_block(self, block: 'list[int]', keys)
 
-    def encrypt(self, msg_str: str) -> bytes:
+    def encrypt(self, msg_str: str, encoding: str='utf-8') -> bytes:
         """
         Encrypt the whole message.
         Handle block division here.
         *Inputs are guaranteed to have a length divisible by 8.
         """
         # TODO: your code here
+        # convert message to bytes
         return bytes(debitize(self.enc_block(bitize(msg_str[:64]))))
     
-    def decrypt(self, msg_bytes: bytes, enc: str = 'utf-8') -> str:
+    def decrypt(self, msg_bytes: bytes, encoding: str='utf-8') -> str:
         """
         Decrypt the whole message.
         Similar to encrypt.
