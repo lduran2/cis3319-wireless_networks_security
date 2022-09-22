@@ -3,7 +3,6 @@
 import socket
 
 # local library crypto
-from crypto import KeyManager, DES
 import node
 from node import Node
 

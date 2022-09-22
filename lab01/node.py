@@ -7,7 +7,7 @@ from sys import stderr
 from _thread import start_new_thread
 
 # local library crypto
-from crypto import KeyManager, DES
+from crypto import KeyManager, DES, bit2hex
 
 class Node:
     '''
@@ -78,13 +78,11 @@ def receiveThread(node, des, encoding):
             # if empty message, skip
             if (len(msg_bytes) <= 0):
                 continue
-            # convert to a string (just for printing!)
-            msg_string = msg_bytes.decode(encoding)
             # decrypt the message
             dec_string = des.decrypt(msg_bytes, encoding=encoding)
             # log the message received
             print(file=stderr)
-            logging.info(f'Received: {msg_string}')
+            logging.info(f'Received: {bit2hex(msg_bytes)}')
             # print the decrypted message
             print('Decrypted: ', end='', file=stderr, flush=True)
             print(dec_string)
