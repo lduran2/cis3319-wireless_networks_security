@@ -486,24 +486,8 @@ class DES:
         # TODO: your code here
         # convert message to bytes
         msg_bytes = msg_str.encode(encoding)
-        # pad if number of bytes % 8
-        msg_bytes_pad = (bytes(0) * (8 - (len(msg_bytes) % 8)))
-        padded_msg_bytes = msg_bytes + msg_bytes_pad
-        # initialize the bits of the bytes to return
-        cyp_all_bits = []
-        # loop through each 8-byte segment (64-bit block), encrypting it
-        for k in range(0, len(padded_msg_bytes), 8):
-            # get the segment
-            msg_block = padded_msg_bytes[k:(k + 8)]
-            # convert to bits
-            msg_bits = bitize(msg_block)
-            # encrypt the bits
-            cyp_bits = self.enc_block(msg_bits)
-            # append to bits to return
-            cyp_all_bits.extend(cyp_bits)
-        # next k
-        # convert back to bytes
-        cyp_all_bytes = debitize(cyp_all_bits)
+        # encrypt these bytes, giving cypher
+        cyp_all_bytes = self.crypt_bytes(msg_bytes, self.enc_block)
         return cyp_all_bytes
     
     def decrypt(self, msg_bytes: bytes, encoding: str='utf-8') -> str:
@@ -512,4 +496,34 @@ class DES:
         Similar to encrypt.
         """
         # TODO: your code here
-        return bytes(debitize(self.dec_block(bitize(msg_bytes[:64])))).decode(enc)
+        # pad if number of bytes % 8
+        msg_bytes_pad = (bytes(0) * (8 - (len(msg_bytes) % 8)))
+        padded_msg_bytes = msg_bytes + msg_bytes_pad
+
+    def crypt_bytes(self, msg_bytes: bytes, callback: 'Callable[[DES, list[int], list[int]]') -> bytes:
+        """
+        Transforms the bit blocks in msg_bytes, using callback, and
+        convert back to bytes. 
+        Handle block division here.
+        *Inputs are guaranteed to have a length divisible by 8.
+        """
+        # pad if number of bytes % 8
+        msg_bytes_pad = (bytes(0) * (8 - (len(msg_bytes) % 8)))
+        padded_msg_bytes = msg_bytes + msg_bytes_pad
+        # initialize the bits of the bytes to return
+        cry_all_bits = []
+        # loop through each 8-byte segment (64-bit block), encrypting it
+        for k in range(0, len(padded_msg_bytes), 8):
+            # get the segment
+            msg_block = padded_msg_bytes[k:(k + 8)]
+            # convert to bits
+            msg_bits = bitize(msg_block)
+            # encrypt the bits
+            cry_bits = callback(msg_bits)
+            # append to bits to return
+            cry_all_bits.extend(cry_bits)
+        # next k
+        # convert back to bytes
+        cry_all_bytes = bytes(debitize(cry_all_bits))
+        return cry_all_bytes
+    
