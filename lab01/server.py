@@ -1,13 +1,11 @@
 
 # standard libraries
 import socket
-import logging
-import traceback
-from sys import stderr
-from _thread import start_new_thread
 
 # local library crypto
-from crypto import KeyManager, DES
+import node
+from node import Node
+
 
 class Server:
     '''
@@ -25,28 +23,25 @@ class Server:
         @param buffer_size: int = default buffer size for receiving
                 messages
         '''
-        # store address, port and buffer size
-        self.addr = addr
-        self.port = port
-        self.buffer_size = buffer_size
+        # create and store the node
+        self.node = Node(addr, port, Server.bindListenAccept, buffer_size)
 
-        # create the stream socket to serve
-        # using IPv4 or string hostnames
-        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    @staticmethod
+    def bindListenAccept(node: Node):
         # bind it to the address whereat to listen
-        self.s.bind((self.addr, self.port))
+        node.s.bind((node.addr, node.port))
         # start listening
-        self.s.listen(Server.MAX_N_CONNS)
+        node.s.listen(Server.MAX_N_CONNS)
         # store the connected socket and update the address
-        self.conn, self.addr = self.s.accept()
+        node.conn, node.addr = node.s.accept()
 
     def send(self, msg_bytes: bytes):
         '''
         Sends the message given by `msg_bytes` through the socket.
         @param msg_bytes: bytes = message to send
         '''
-        # delegate to the socket
-        self.conn.send(msg_bytes)
+        # delegate to the node
+        self.node.send(msg_bytes)
 
     def recv(self, buffer_size=None) -> bytes:
         '''
@@ -54,11 +49,8 @@ class Server:
         @param buffer_size: int? = size of the receiving buffer
         @return the message received
         '''
-        # if no buffer_size given, use the default
-        if buffer_size is None:
-            buffer_size = self.buffer_size
-        # delegate to the socket
-        msg_bytes = self.conn.recv(buffer_size)
+        # delegate to the node
+        msg_bytes = self.node.recv(buffer_size)
         # return the message
         return msg_bytes
 
@@ -66,7 +58,7 @@ class Server:
         '''
         Closes the backing socket.
         '''
-        self.conn.close()
+        self.node.close()
 # end class Server
 
 
@@ -74,81 +66,11 @@ class Server:
 SERVER_ADDR = 'localhost'
 SERVER_PORT = 9999
 SERVER_CHARSET = 'utf-8'
-# name of file containing the key
-KEY_FILE = 'key.txt'
 # prompt for input
 PROMPT = 'server> '
-# ends the input stream
-SENTINEL = 'exit'
-
-
-def receiveThread(server, des):
-    old_tb = None
-    while True:
-        try:
-            # read in from the server
-            msg_bytes = server.recv()
-            # if empty message, skip
-            if (len(msg_bytes) <= 0):
-                continue
-            # convert to a string
-            msg_string = msg_bytes.decode(SERVER_CHARSET)
-            # decrypt the message
-            dec_string = des.decrypt(msg_bytes, enc=SERVER_CHARSET)
-            # log the message received
-            print(file=stderr)
-            logging.info(f'Received: {msg_string}')
-            # print the decrypted message
-            print('Decrypted: ', end='', file=stderr, flush=True)
-            print(dec_string)
-            # print new prompt
-            print(file=stderr, end=PROMPT, flush=True)
-        except Exception as e:
-            tb = traceback.format_exc()
-            # don't repeat the trackback
-            if (tb != old_tb):
-                print(file=stderr)
-                logging.error(tb)
-            old_tb = tb
-            continue
-    # end while True
-# end def receiveThread(server)
 
 
 # run the server until SENTINEL is given
 if __name__ == '__main__':
-    # configure the logger
-    logging.basicConfig(level=logging.INFO)
-
-    # create a server
-    logging.info(f'listening to {SERVER_ADDR}:{SERVER_PORT} . . .')
-    server = Server(SERVER_ADDR, SERVER_PORT)
-    # read in the key word
-    key = KeyManager.read_key(KEY_FILE)
-    # generate the DES key for encryption
-    # and reverse key for decryption
-    des = DES(key)
-
-    # start the receiving thread
-    start_new_thread(receiveThread, (server, des))
-
-    while True:
-        # TODO: your code here
-
-        # accept user input until SENTINEL given
-        msg_string = input(PROMPT)
-        if msg_string == SENTINEL:
-            break
-        
-        # TODO: your code here
-        # convert new input message to bytes
-        msg_bytes = msg_string.encode(SERVER_CHARSET)
-        # encryption
-        cyp_bytes = des.encrypt(msg_bytes)
-        # send the message
-        server.send(cyp_bytes)
-    # end while True
-
-    # close the server
-    server.close()
+    node.main('listening', Server, SERVER_ADDR, SERVER_PORT, SERVER_CHARSET, PROMPT)
 # end if __name__ == '__main__'
