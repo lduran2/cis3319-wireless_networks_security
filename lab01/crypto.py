@@ -302,11 +302,13 @@ class DES:
         RoundKeys16x48 = [None] * 16
 
         for i_round in range(0, 16):
+            # perform shifts
             leftKey = shiftLeft(n=splitN, blockN=leftKey, numOfShifts=ShiftTable16[i_round])
             rightKey = shiftLeft(n=splitN, blockN=rightKey, numOfShifts=ShiftTable16[i_round])
-            
+            # combine and permute
             preRoundKey = combine(n=splitN, m=dropN, leftBlockN=leftKey, rightBlockN=rightKey)
             RoundKeys16x48[i_round] = permute(n=dropN, m=48, raw_seq=preRoundKey, table=DES.KEY_COMPRESSION)
+
             # print the RoundKey generated if in debug mode
             if (DEBUG_MODE):
                 leftKeyPad = ([0] * (8 - len(leftKey) % 8))
@@ -347,12 +349,16 @@ class DES:
         # whiten expanded_R by XORing with the key
         white_R = xor(expanded_R, key)
 
+        if (DEBUG_MODE):
+            print('whitened R: ', bit2hex(white_R))
+
         # use S-boxes to perform actual "mixing"
         # this creates confusion
 
         # allocate space for S-mixed R
-        # the values in S-boxes are bytes, not bits
-        S_R_bytes = [0] * len(DES.S)
+        # the values in S-boxes are nibbles, not bits
+        n_S = len(DES.S)
+        S_R_nibbles = [0] * n_S
 
         # R is then divided into 8, 6-bit chunks
         for i_S, k in enumerate(range(0, N_EXPAND, DES.S_IP_BITS)):
@@ -365,15 +371,26 @@ class DES:
             i_row = debitize(DES.I_ROW_PAD + i_row_bits)[0]
             i_col = debitize(DES.I_COL_PAD + i_col_bits)[0]
             # store the 4-bit value from next S-box from R_6bit
-            S_R_bytes[i_S] = DES.S[i_S][i_row][i_col]
+            # the S-box contains nibbles (or hexadecimal digits)
+            S_R_nibbles[i_S] = DES.S[i_S][i_row][i_col]
+            if (DEBUG_MODE):
+                print(f'({i_row},{i_col})')
+                print(f'S-mixed R [bytes] #{i_S}:', S_R_nibbles[i_S])
         # next k
 
+        # convert nibbles pairs to bytes
+        S_R_bytes = [((S_R_nibbles[k]*16) + S_R_nibbles[k|1]) for k in range(0, n_S, 2)]
         # bitize S_R again
         S_R_bits = bitize(S_R_bytes)
 
         # perform the straight permutation
         # S-mixed R is now the original size
         R_out = permute(n=N, m=N, raw_seq=S_R_bits, table=DES.D_STRAIGHT)
+
+        if (DEBUG_MODE):
+            print('S-mixed R [bytes]:', S_R_bytes)
+            print('S-mixed R [bits]: ', bit2hex(S_R_bits))
+            print('R_out: ', bit2hex(R_out))
 
         return R_out
 
@@ -422,10 +439,9 @@ class DES:
         # perform rounds
         for k in range(N_ROUNDS):
             # mixer mixes f(R, K) into L
+            f_R_key = DES.f(rightBlock, self.keys[k])
             # swapper swaps L, R
-            leftBlock, rightBlock = (rightBlock,
-                xor(leftBlock, DES.f(rightBlock, self.keys[k]))
-            )
+            leftBlock, rightBlock = (rightBlock, xor(leftBlock, f_R_key))
         # next k
 
         # recombine after rounds
