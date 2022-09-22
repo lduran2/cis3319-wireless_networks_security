@@ -91,7 +91,7 @@ def receiveThread(server, des):
             # if empty message, skip
             if (len(msg_bytes) <= 0):
                 continue
-            # convert to a string
+            # convert to a string (just for printing!)
             msg_string = msg_bytes.decode(SERVER_CHARSET)
             # decrypt the message
             dec_string = des.decrypt(msg_bytes, encoding=SERVER_CHARSET)
@@ -141,10 +141,8 @@ if __name__ == '__main__':
             break
         
         # TODO: your code here
-        # convert new input message to bytes
-        msg_bytes = msg_string.encode(SERVER_CHARSET)
         # encryption
-        cyp_bytes = des.encrypt(msg_bytes, encoding=SERVER_CHARSET)
+        cyp_bytes = des.encrypt(msg_string, encoding=SERVER_CHARSET)
         # send the message
         server.send(cyp_bytes)
     # end while True
