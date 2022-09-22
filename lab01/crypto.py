@@ -286,22 +286,35 @@ class DES:
         """
 
         n = 64
-        permuteM = 56
-        splitM = n//2
+        dropN = n*7//8
+        # split from the parity DROPPED key
+        splitN = dropN//2
 
-        cipherKey = permute(n=n, m=permuteM, raw_seq=key, table=DES.KEY_DROP)
-        leftKey, rightKey = split(n=permuteM, m=splitM, inBlockN=cipherKey)
+        cipherKey = permute(n=n, m=dropN, raw_seq=key, table=DES.KEY_DROP)
+        leftKey, rightKey = split(n=dropN, m=splitN, inBlockN=cipherKey)
+
+        if (DEBUG_MODE):
+            print('cipherKey: ', bit2hex(cipherKey))
+            leftKeyPad = ([0] * (8 - len(leftKey) % 8))
+            rightKeyPad = ([0] * (8 - len(rightKey) % 8))
+            print(f'[{bit2hex(leftKeyPad + leftKey)}, {bit2hex(rightKeyPad + rightKey)}]')
 
         RoundKeys16x48 = [None] * 16
 
         for i_round in range(0, 16):
-            leftKey = shiftLeft(n=splitM, blockN=leftKey, numOfShifts=ShiftTable16[i_round])
-            rightKey = shiftLeft(n=splitM, blockN=rightKey, numOfShifts=ShiftTable16[i_round])
-            preRoundKey = combine(n=splitM, m=permuteM, leftBlockN=leftKey, rightBlockN=rightKey)
-            RoundKeys16x48[i_round] = permute(n=permuteM, m=48, raw_seq=preRoundKey, table=DES.KEY_COMPRESSION)
+            leftKey = shiftLeft(n=splitN, blockN=leftKey, numOfShifts=ShiftTable16[i_round])
+            rightKey = shiftLeft(n=splitN, blockN=rightKey, numOfShifts=ShiftTable16[i_round])
+            
+            preRoundKey = combine(n=splitN, m=dropN, leftBlockN=leftKey, rightBlockN=rightKey)
+            RoundKeys16x48[i_round] = permute(n=dropN, m=48, raw_seq=preRoundKey, table=DES.KEY_COMPRESSION)
             # print the RoundKey generated if in debug mode
             if (DEBUG_MODE):
-                print(f'generate_key round #{i_round}: ', debitize(RoundKeys16x48[i_round]))
+                leftKeyPad = ([0] * (8 - len(leftKey) % 8))
+                rightKeyPad = ([0] * (8 - len(rightKey) % 8))
+                print(f'round #{i_round}: ', end='')
+                print(f'[{bit2hex(leftKeyPad + leftKey)}, {bit2hex(rightKeyPad + rightKey)}]')
+                print(f'key_generation  preround #{i_round}: ', bit2hex(preRoundKey))
+                print(f'key_generation postround #{i_round}: ', bit2hex(RoundKeys16x48[i_round]))
         return RoundKeys16x48
 
     # bits input into S-box
