@@ -45,9 +45,9 @@ def bitize(byts: bytes) -> 'list[int]':
 
     return bits
 
-def bitize_int(bits: list[int], i: int, nbits: int = 8) -> 'list[int]':
+def bitize_int(bits: list[int], i: int, size: int = 8) -> 'list[int]':
     # loop through the bits
-    for i_bit in range((nbits - 1), -1, -1):
+    for i_bit in range((size - 1), -1, -1):
         # pop off less significant bits
         shift = (byt >> i_bit)
         # store the new least significant bit
