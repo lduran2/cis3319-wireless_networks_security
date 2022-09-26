@@ -40,15 +40,19 @@ def bitize(byts: bytes) -> 'list[int]':
 
     # for each byt
     for byt in byts:
-        # loop through the bits
-        for i in range(8,0,-1):
-            # pop off less significant bits
-            shift = (byt >> (i - 1))
-            # store the new least significant bit
-            bits.append(shift & 1)
-        # end for i in range(8,0,-1)
+        bitize_int(bits, i)
     # end for byt in byts
 
+    return bits
+
+def bitize_int(bits: list[int], i: int, nbits: int = 8) -> 'list[int]':
+    # loop through the bits
+    for i_bit in range((nbits - 1), -1, -1):
+        # pop off less significant bits
+        shift = (byt >> i_bit)
+        # store the new least significant bit
+        bits.append(shift & 1)
+    # next ibit
     return bits
 
 def debitize(bits: Iterable[int]) -> bytes:
