@@ -111,11 +111,13 @@ def main(connecting_status: str, node_init: 'Callable[[addr, port], Node]', addr
     # create a node
     logging.info(f'{connecting_status} to {addr}:{port} . . .')
     node = node_init(addr, port)
-    # read in the key word
-    key = KeyManager.read_key(KEY_FILE)
+    # read in the key word for encryption
+    enc_key = KeyManager.read_key(KEY_FILE)
+    # read in the key word for HMAC
+    mac_key = KeyManager().read_key('mac_key.txt')
     # generate the DES key for encryption
     # and reverse key for decryption
-    des = DES(key)
+    des = DES(enc_key)
 
     # start the receiving thread
     start_new_thread(receiveThread, (node, des, encoding, prompt))
