@@ -60,12 +60,12 @@ class Client:
 
 # load configuration
 config = json.load(open('config.json', 'r'))
-# section in configuration file
-SECTION = 'client'
 # load connection address, port whereat the server listens
 # load character encoding
 SERVER_ADDR, SERVER_PORT, SERVER_CHARSET = (
     config['server'][key] for key in ('addr', 'port', 'charset'))
+# section in configuration file
+SECTION = 'client'
 # load prompt for input, connection status
 PROMPT, CONNECTING_STATUS = (
     config[SECTION][key] for key in ('prompt', 'connecting_status'))
