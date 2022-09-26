@@ -1,0 +1,18 @@
+{
+    "node": {
+        "enc_key_file": "key.txt",
+        "mac_key_file": "mac_key.txt",
+        "sentinel": "exit"
+    },
+    "server": {
+        "prompt": "server> ",
+        "connecting_status": "listening to",
+        "addr": "localhost",
+        "port": 9999,
+        "charset": "utf-8"
+    },
+    "client": {
+        "prompt": "client> ",
+        "connecting_status": "connecting to"
+    }
+}
