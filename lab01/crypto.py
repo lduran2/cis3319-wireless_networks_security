@@ -3,7 +3,7 @@ from copy import deepcopy
 import random
 from typing import Iterable
 
-DEBUG_MODE = False
+DEBUG_MODE = True
 
 class KeyManager:
     @staticmethod
@@ -148,6 +148,14 @@ def combine(n: int, m: int, leftBlockN: 'list[int]', rightBlockN: 'list[int]') -
     '''
     return (leftBlockN[:n] + rightBlockN[:n])[:m]
 # end def combine(n: int, m: int, leftKeyN: 'list[list[int]]', rightKeyN: 'list[list[int]]')
+
+def needed_padding(i: int, divisor=8):
+    '''
+    Calculates the amount of padding needed to complete a multiple of
+    the divisor.
+    '''
+    return ((-i) % divisor)
+# end def needed_padding(i: int, divisor=8)
 
 class DES:
 
@@ -300,8 +308,8 @@ class DES:
 
         if (DEBUG_MODE):
             print('cipherKey: ', bit2hex(cipherKey))
-            leftKeyPad = ([0] * (8 - len(leftKey) % 8))
-            rightKeyPad = ([0] * (8 - len(rightKey) % 8))
+            leftKeyPad = ([0] * needed_padding(len(leftKey)))
+            rightKeyPad = ([0] * needed_padding(len(rightKey)))
             print(f'[{bit2hex(leftKeyPad + leftKey)}, {bit2hex(rightKeyPad + rightKey)}]')
 
         RoundKeys16x48 = [None] * 16
@@ -316,8 +324,8 @@ class DES:
 
             # print the RoundKey generated if in debug mode
             if (DEBUG_MODE):
-                leftKeyPad = ([0] * (8 - len(leftKey) % 8))
-                rightKeyPad = ([0] * (8 - len(rightKey) % 8))
+                leftKeyPad = ([0] * needed_padding(len(leftKey)))
+                rightKeyPad = ([0] * needed_padding(len(rightKey)))
                 print(f'round #{i_round}: ', end='')
                 print(f'[{bit2hex(leftKeyPad + leftKey)}, {bit2hex(rightKeyPad + rightKey)}]')
                 print(f'key_generation  preround #{i_round}: ', bit2hex(preRoundKey))
@@ -514,17 +522,13 @@ class DES:
         Handle block division here.
         *Inputs are guaranteed to have a length divisible by 8.
         """
-        # number of characters past multiple of 8
-        rem = (len(msg_bytes) % 8)
-        # find the needed padding
-        complement = (8 - rem)
-        needed_pad = (complement if complement in range(8) else 0)
-        # pad if number of bytes % 8
-        msg_bytes_pad = (bytearray(needed_pad))
+        # pad if number of bytes if needed
+        msg_bytes_pad = bytearray(needed_padding(len(msg_bytes)))
         padded_msg_bytes = msg_bytes + msg_bytes_pad
         if (DEBUG_MODE):
-            print('padding needed:', (8 - (len(msg_bytes) % 8)))
+            print('original length:', len(msg_bytes))
             print('padding created:', len(msg_bytes_pad))
+            print('new length:', len(padded_msg_bytes))
         # initialize the bits of the bytes to return
         cry_all_bits = []
         # loop through each 8-byte segment (64-bit block), encrypting it
