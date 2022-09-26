@@ -1,5 +1,6 @@
 
 # standard libraries
+import json
 import socket
 import logging
 import traceback
@@ -63,10 +64,14 @@ class Node:
 # end class Node
 
 
-# name of file containing the key
-KEY_FILE = 'key.txt'
-# ends the input stream
-SENTINEL = 'exit'
+# load configuration
+config = json.load(open('config.json', 'r'))
+
+# load name of files containing the keys
+ENC_FILE, MAC_FILE = (
+    config['node'][key] for key in ('enc_key_file', 'mac_key_file'))
+# load string that ends the input stream
+SENTINEL = config['node']['sentinel']
 
 
 def receiveThread(node, des, encoding, prompt):
@@ -109,12 +114,12 @@ def main(connecting_status: str, node_init: 'Callable[[addr, port], Node]', addr
     logging.basicConfig(level=logging.INFO)
 
     # create a node
-    logging.info(f'{connecting_status} to {addr}:{port} . . .')
+    logging.info(f'{connecting_status} {addr}:{port} . . .')
     node = node_init(addr, port)
     # read in the key word for encryption
-    enc_key = KeyManager.read_key(KEY_FILE)
+    enc_key = KeyManager.read_key(ENC_FILE)
     # read in the key word for HMAC
-    mac_key = KeyManager().read_key('mac_key.txt')
+    mac_key = KeyManager().read_key(MAC_FILE)
     # generate the DES key for encryption
     # and reverse key for decryption
     des = DES(enc_key)
