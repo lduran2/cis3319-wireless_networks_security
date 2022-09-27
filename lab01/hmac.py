@@ -105,7 +105,7 @@ def extend_words(words: list[list[int]]):
             ) for (off, shifts) in EXTEND_OFFSET_SHIFTS
         )
         # add them arithmetically with earlier words for new words
-        words[k] = (words[k - 16] + words[i - 7] + sum(shift_sum))
+        words[k] = (words[k - 16] + words[k - 7] + sum(shift_sum))
     # next k
 # end def extend_words(words: list[list[int]])
 
