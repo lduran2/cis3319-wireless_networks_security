@@ -18,7 +18,7 @@ COMPRESS_OFFSET_SHIFTS = (
 # array of round constants
 # with the first 32 fractional bits of the cube roots of the
 # first 64 primes (SHA-2, 2022).
-ROUND_CONSTS = [
+ROUND_CONSTS = (
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5,
     0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
     0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3,
@@ -35,7 +35,7 @@ ROUND_CONSTS = [
     0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
     0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208,
     0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
-]
+)
 
 def sha256(msg_bits: Iterable[int]) -> list[int]:
     """
@@ -49,11 +49,11 @@ def sha256(msg_bits: Iterable[int]) -> list[int]:
     )
     preproc_msg = preprocess(msg_bits)
     # loop through 512-bit chunks
-    for k in range(0, range(0, preproc_msg, 512)):
-        process_chunk512(hashes, preproc_msg[k, (k + 512)])
+    for k in range(0, len(preproc_msg), 512):
+        process_chunk512(hashes, preproc_msg[k:(k + 512)])
     # next k
     # append all hashes together to make the digest
-    
+# end def sha256(msg_bits: Iterable[int])
 
 def preprocess(msg_bits: Iterable[int]) -> list[int]:
     """
@@ -61,11 +61,11 @@ def preprocess(msg_bits: Iterable[int]) -> list[int]:
     """
     # length of the original message
     len_msg = len(msg_bits)
-    # calculate padding n_pad so that (len_msg + 1 + n_pad + 64) | 512
-    # the 64-bits will store the length of the original message
+    # calculate padding n_pad so that ((len_msg + 1 + n_pad + 64) | 512).
+    # The 64-bits will store the length of the original message
     n_pad = needed_padding(len_msg + 1 + 64, divisor=512)
     # create padding preceding with set bit
-    padding = [0]*(n_pad + 1)
+    padding = ([0]*(n_pad + 1))
     padding[0] = 1
     # pad the message
     padded_message = (msg_bits + padding)
