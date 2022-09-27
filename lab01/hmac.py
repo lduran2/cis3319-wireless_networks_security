@@ -38,16 +38,15 @@ ROUND_CONSTS = [
 ]
 
 def sha256(msg_bits: Iterable[int]) -> list[int]:
+    """
+    Performs SHA256 hashing on the given bytes.
+    """
     # initialize the hashes
     # with the first 32 fractional bits of the square roots of the
     # first 8 primes (SHA-2, 2022).
     hashes = (0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
               0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
     )
-
-    """
-    Performs SHA256 hashing on the given bytes.
-    """
     preproc_msg = preprocess(msg_bits)
     # loop through 512-bit chunks
     for k in range(0, range(0, preproc_msg, 512)):
@@ -139,7 +138,9 @@ def compress_work_arr(work_arr, words):
     del work_arr[8:]
 # end def compress_work_arr(work_arr, words)
 
-def shift_int(shiftend: int, size:int = 32, left: int=None, right: int=None):
+def shift_int(shiftend: int, size:int = 32,
+              left: int=None, right: int=None
+):
     # handle defaults
     # use 0 for both if both None
     # otherwise, use (left + right = size)
