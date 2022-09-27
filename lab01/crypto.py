@@ -32,7 +32,7 @@ class KeyManager:
 
 def bitize(byts: bytes) -> 'list[int]':
     """
-    bitize bytes
+    Bitizes bytes
     """
     bits = []
 
@@ -46,6 +46,13 @@ def bitize(byts: bytes) -> 'list[int]':
     return bits
 
 def bitize_int(bits: list[int], i: int, size: int = 8) -> 'list[int]':
+    """
+    Bitizes an integer.
+    @param bits: list[int] = list of bits to append to
+    @param i: int = integer to bitize
+    @param size: int = size of the integer (default 8)
+    @return the array of bits
+    """
     # loop through the bits
     for i_bit in range((size - 1), -1, -1):
         # pop off less significant bits
@@ -57,17 +64,24 @@ def bitize_int(bits: list[int], i: int, size: int = 8) -> 'list[int]':
 
 def debitize(bits: Iterable[int]) -> bytes:
     """
-    debbitize a list of bits
+    Debitizes a list of bits by bytes.
     """
     # TODO: your code here
     quo, rem = divmod(len(bits), 8)
     if rem != 0:
         raise ValueError('bits length is not a multiple of 8')
 
-    byts = [sum(b*2**(7-i) for (i, b) in enumerate(bits[8*k : 8*(k+1)])) for k in range(0, quo)]
+    byts = (debitize_int(bits[(k << 3):((k + 1) << 3)])
+        for k in range(0, quo))
 
     # make sure to return as bytes, rather than list[int]
     return bytes(byts)
+
+def debitize_int(bits: Iterable[int], size: int = 8) -> int:
+    """
+    Debitizes a list of bits into an integer.
+    """
+    return sum((b << (size - i - 1)) for (i, b) in enumerate(bits))
 
 def bit2hex(bits: Iterable[int]) -> str:
     """
