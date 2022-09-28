@@ -4,7 +4,8 @@ import json
 import socket
 
 # local library crypto
-import node
+import run_node
+from run_node import config
 from node import Node
 
 
@@ -63,9 +64,7 @@ class Server:
 # end class Server
 
 
-# load configuration
-config = json.load(open('config.json', 'r'))
-# section in configuration file
+# corresponding section in configuration file
 SECTION = 'server'
 # load connection address, port, character encoding
 SERVER_ADDR, SERVER_PORT, SERVER_CHARSET = (
@@ -77,5 +76,5 @@ PROMPT, CONNECTING_STATUS = (
 
 # run the server until SENTINEL is given
 if __name__ == '__main__':
-    node.main(CONNECTING_STATUS, Server, SERVER_ADDR, SERVER_PORT, SERVER_CHARSET, PROMPT)
+    run_node.main(CONNECTING_STATUS, Server, SERVER_ADDR, SERVER_PORT, SERVER_CHARSET, PROMPT)
 # end if __name__ == '__main__'
