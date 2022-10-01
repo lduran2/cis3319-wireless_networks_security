@@ -500,20 +500,35 @@ class DES:
         # convert message to bytes
         msg_bytes = msg_str.encode(encoding)
         # encrypt these bytes, giving cypher
-        cypher = self.crypt_bytes(msg_bytes, self.enc_block)
+        cypher = self.encrypt_bytes(msg_bytes)
         return cypher
     
-    def decrypt(self, msg_bytes: bytes, encoding: str='utf-8') -> str:
+    def decrypt(self, cip_bytes: bytes, encoding: str='utf-8') -> str:
         """
         Decrypt the whole message.
         Similar to encrypt.
         """
-        # TODO: your code here
         # decrypt bytes, giving plaintext bytes
-        plaintext_bytes = self.crypt_bytes(msg_bytes, self.dec_block)
+        plaintext_bytes = self.decrypt_bytes(cip_bytes)
         # convert to string
         plaintext_string = plaintext_bytes.decode(encoding)
         return plaintext_string
+
+    def encrypt_bytes(self, msg_bytes: str) -> bytes:
+        """
+        Encrypt the whole message bytes.
+        """
+        # encrypt these bytes, giving cypher
+        cypher = self.crypt_bytes(msg_bytes, self.enc_block)
+        return cypher
+    
+    def decrypt_bytes(self, cip_bytes: bytes) -> bytes:
+        """
+        Decrypt the whole message, keeping it as bytes.
+        """
+        # decrypt bytes, giving plaintext bytes
+        plaintext_bytes = self.crypt_bytes(cip_bytes, self.dec_block)
+        return plaintext_bytes
 
     def crypt_bytes(self, msg_bytes: bytes, callback: 'Callable[[DES, list[int]], list[int]]') -> bytes:
         """
