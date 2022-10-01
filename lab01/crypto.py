@@ -490,7 +490,11 @@ class DES:
         return block_FP
     # end def cry_block(self, block: 'list[int]', keys)
 
-    def encrypt(self, msg_str: str, encoding: str='utf-8') -> bytes:
+    def encrypt(self, msg_str: str, encoding: str='utf-8',
+        encoder: 'Callable[[str, str], bytes]'=(
+            lambda s, encoding: s.encode(encoding)
+        )
+    ) -> bytes:
         """
         Encrypt the whole message.
         Handle block division here.
@@ -498,12 +502,16 @@ class DES:
         """
         # TODO: your code here
         # convert message to bytes
-        msg_bytes = msg_str.encode(encoding)
+        msg_bytes = encoder(msg_str, encoding)
         # encrypt these bytes, giving cypher
         cypher = self.crypt_bytes(msg_bytes, self.enc_block)
         return cypher
     
-    def decrypt(self, msg_bytes: bytes, encoding: str='utf-8') -> str:
+    def decrypt(self, msg_bytes: bytes, encoding: str='utf-8',
+        decoder: 'Callable[[bytes, str], str]'=(
+            lambda byts, encoding: byts.decode(encoding)
+        )
+    ) -> str:
         """
         Decrypt the whole message.
         Similar to encrypt.
@@ -512,7 +520,7 @@ class DES:
         # decrypt bytes, giving plaintext bytes
         plaintext_bytes = self.crypt_bytes(msg_bytes, self.dec_block)
         # convert to string
-        plaintext_string = plaintext_bytes.decode(encoding)
+        plaintext_string = decoder(plaintext_bytes, encoding)
         return plaintext_string
 
     def crypt_bytes(self, msg_bytes: bytes, callback: 'Callable[[DES, list[int]], list[int]]') -> bytes:

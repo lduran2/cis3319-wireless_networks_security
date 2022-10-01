@@ -37,24 +37,24 @@ class Server:
         # store the connected socket and update the address
         node.conn, node.addr = node.s.accept()
 
-    def send(self, msg_bytes: bytes):
+    def send(self, msg: str):
         '''
-        Sends the message given by `msg_bytes` through the socket.
-        @param msg_bytes: bytes = message to send
+        Sends the message given by `msg` through the socket.
+        @param msg: str = message to send
         '''
         # delegate to the node
-        self.node.send(msg_bytes)
+        self.node.send(msg)
 
-    def recv(self, buffer_size=None) -> bytes:
+    def recv(self, buffer_size=None) -> str:
         '''
         Receives a message from the socket.
         @param buffer_size: int? = size of the receiving buffer
         @return the message received
         '''
         # delegate to the node
-        msg_bytes = self.node.recv(buffer_size)
+        msg = self.node.recv(buffer_size)
         # return the message
-        return msg_bytes
+        return msg
 
     def close(self):
         '''

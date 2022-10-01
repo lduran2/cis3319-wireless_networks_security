@@ -26,17 +26,6 @@ def receiveThread(node, des, encoding, prompt):
         try:
             # read in from the node
             msg_bytes = node.recv()
-            # if empty message, skip
-            if (len(msg_bytes) <= 0):
-                continue
-            # ignore any illegal bytes
-            msg_bytes = bytes(b for b in msg_bytes if b in range(256))
-            # decrypt the message
-            dec_string = des.decrypt(msg_bytes, encoding=encoding)
-            # log the message received
-            print(file=stderr)
-            print(file=stderr)
-            logging.info(f'Received: {msg_bytes}')
             # print the decrypted message
             print('Decrypted: ', end='', file=stderr, flush=True)
             print(dec_string)
@@ -56,6 +45,26 @@ def receiveThread(node, des, encoding, prompt):
 
 # run the node until SENTINEL is given
 def main(connecting_status: str, node_init: 'Callable[[addr, port], Node]', addr: str, port: int, encoding: str, prompt: str):
+    def encrypt(msg: str, encoding: str) -> bytes:
+        # encryption
+        cyp_bytes = des.encrypt(msg, encoding=encoding)
+        # send the message
+        logging.info(f'Sending cypher: {cyp_bytes}')
+    # end def encrypt(msg: str, encoding: str)
+
+    def decrypt(msg_bytes: str, encoding: str) -> bytes
+        # if empty message, skip
+        if (len(msg_bytes) <= 0):
+            continue
+        # ignore any illegal bytes
+        msg_bytes = bytes(b for b in msg_bytes if b in range(256))
+        # decrypt the message
+        dec_string = des.decrypt(msg_bytes, encoding=encoding)
+        # log the message received
+        print(file=stderr)
+        print(file=stderr)
+        logging.info(f'Received: {msg_bytes}')
+
     # configure the logger
     logging.basicConfig(level=logging.INFO)
 
@@ -82,11 +91,7 @@ def main(connecting_status: str, node_init: 'Callable[[addr, port], Node]', addr
             break
         
         # TODO: your code here
-        # encryption
-        cyp_bytes = des.encrypt(msg_string, encoding=encoding)
-        # send the message
-        logging.info(f'Sending cypher: {cyp_bytes}')
-        node.send(cyp_bytes)
+        node.send(msg_string)
     # end while True
 
     # close the node
