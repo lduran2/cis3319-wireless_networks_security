@@ -1,6 +1,6 @@
 {
     "node": {
-        "enc_key_file": "key.txt",
+        "enc_key_file": "enc_key.txt",
         "mac_key_file": "mac_key.txt",
         "sentinel": "exit"
     },

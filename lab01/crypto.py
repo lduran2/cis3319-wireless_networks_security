@@ -512,10 +512,10 @@ class DES:
         # decrypt bytes, giving plaintext bytes
         plaintext_bytes = self.crypt_bytes(msg_bytes, self.dec_block)
         # convert to string
-        plaintext_string = str(plaintext_bytes, encoding)
+        plaintext_string = plaintext_bytes.decode(encoding)
         return plaintext_string
 
-    def crypt_bytes(self, msg_bytes: bytes, callback: 'Callable[[DES, list[int], list[int]]') -> bytes:
+    def crypt_bytes(self, msg_bytes: bytes, callback: 'Callable[[DES, list[int]], list[int]]') -> bytes:
         """
         Transforms the bit blocks in msg_bytes, using callback, and
         convert back to bytes. 
