@@ -157,6 +157,41 @@ def needed_padding(i: int, divisor=8):
     return ((-i) % divisor)
 # end def needed_padding(i: int, divisor=8)
 
+class CharacterEncoder:
+    '''
+    Class used to convert between strings and bytes.
+    '''
+
+    def __init__(self, _encoding: str='utf-8'):
+        '''
+        Initializes an encoder.
+        @param _encoding: str = the character set used to encode and
+            decode
+        '''
+        self.encoding = _encoding
+
+    def encode(self, string: str) -> bytes:
+        '''
+        Encodes the given string into bytes using self's character
+        encoding.
+        @param string: str = to encode
+        @return byte encoding of the string
+        '''
+        return string.encode(self.encoding)
+
+    def decode(self, byts: bytes) -> str:
+        '''
+        Decodes the given byte arrays into a string using self's
+        character encoding.
+        @param byts: bytes = to decode
+        @return string decoded from the byte array
+        '''
+        return byts.decode(self.encoding)
+# end class CharacterEncoder
+
+# create a character encoder using UTF-8
+utf8_encoder = CharacterEncoder()
+
 class DES:
 
     # initial permutation
@@ -490,7 +525,7 @@ class DES:
         return block_FP
     # end def cry_block(self, block: 'list[int]', keys)
 
-    def encrypt(self, msg_str: str, encoding: str='utf-8') -> bytes:
+    def encrypt(self, msg_str: str, encode: 'Callable[[object, str], bytes]'=utf8_encoder.encode) -> bytes:
         """
         Encrypt the whole message.
         Handle block division here.
@@ -498,12 +533,12 @@ class DES:
         """
         # TODO: your code here
         # convert message to bytes
-        msg_bytes = msg_str.encode(encoding)
+        msg_bytes = encode(msg_str)
         # encrypt these bytes, giving cypher
         cypher = self.crypt_bytes(msg_bytes, self.enc_block)
         return cypher
     
-    def decrypt(self, msg_bytes: bytes, encoding: str='utf-8') -> str:
+    def decrypt(self, msg_bytes: bytes, decode: 'Callable[[object, bytes], str]'=utf8_encoder.decode) -> str:
         """
         Decrypt the whole message.
         Similar to encrypt.
@@ -512,7 +547,7 @@ class DES:
         # decrypt bytes, giving plaintext bytes
         plaintext_bytes = self.crypt_bytes(msg_bytes, self.dec_block)
         # convert to string
-        plaintext_string = plaintext_bytes.decode(encoding)
+        plaintext_string = decode(plaintext_bytes)
         return plaintext_string
 
     def crypt_bytes(self, msg_bytes: bytes, callback: 'Callable[[DES, list[int]], list[int]]') -> bytes:
@@ -545,4 +580,4 @@ class DES:
         # convert back to bytes
         cry_all_bytes = bytes(debitize(cry_all_bits))
         return cry_all_bytes
-    
+# end class DES

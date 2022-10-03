@@ -8,7 +8,7 @@ from _thread import start_new_thread
 
 
 # local library crypto
-from crypto import KeyManager, DES, bit2hex
+from crypto import KeyManager, DES, CharacterEncoder, bit2hex
 
 # load configuration
 config = json.load(open('config.json', 'r'))
@@ -20,7 +20,7 @@ ENC_FILE, MAC_FILE = (
 SENTINEL = config['node']['sentinel']
 
 
-def receiveThread(node, des, encoding, prompt):
+def receiveThread(node, des, decode, prompt):
     old_tb = None
     while True:
         try:
@@ -32,7 +32,7 @@ def receiveThread(node, des, encoding, prompt):
             # ignore any illegal bytes
             msg_bytes = bytes(b for b in msg_bytes if b in range(256))
             # decrypt the message
-            dec_string = des.decrypt(msg_bytes, encoding=encoding)
+            dec_string = des.decrypt(msg_bytes, decode=decode)
             # log the message received
             print(file=stderr)
             print(file=stderr)
@@ -70,8 +70,12 @@ def main(connecting_status: str, node_init: 'Callable[[addr, port], Node]', addr
     # and reverse key for decryption
     des = DES(enc_key)
 
+    # create the encoder
+    serverEncoder = CharacterEncoder(encoding)
+    decode = serverEncoder.decode
+
     # start the receiving thread
-    start_new_thread(receiveThread, (node, des, encoding, prompt))
+    start_new_thread(receiveThread, (node, des, decode, prompt))
 
     while True:
         # TODO: your code here
@@ -83,7 +87,7 @@ def main(connecting_status: str, node_init: 'Callable[[addr, port], Node]', addr
         
         # TODO: your code here
         # encryption
-        cyp_bytes = des.encrypt(msg_string, encoding=encoding)
+        cyp_bytes = des.encrypt(msg_string, encode=serverEncoder.encode)
         # send the message
         logging.info(f'Sending cypher: {cyp_bytes}')
         node.send(cyp_bytes)
