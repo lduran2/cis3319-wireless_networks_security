@@ -4,6 +4,7 @@ import json
 import logging
 import traceback
 from sys import stderr
+from hashlib import sha256
 from _thread import start_new_thread
 
 

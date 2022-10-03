@@ -514,7 +514,7 @@ class DES:
         plaintext_string = plaintext_bytes.decode(encoding)
         return plaintext_string
 
-    def encrypt_bytes(self, msg_bytes: str) -> bytes:
+    def encrypt_bytes(self, msg_bytes: bytes) -> bytes:
         """
         Encrypt the whole message bytes.
         """
