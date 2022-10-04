@@ -1,6 +1,6 @@
 from hashlib import sha256
 
-class HmacEncoder:
+class SimpleHmacEncoder:
     '''
     Encoder that performs HMAC encoding and HMAC check on decoding.
     '''
@@ -22,14 +22,7 @@ class HmacEncoder:
         @return byte encoding of the string
         '''
         msg_byts = self._parent.encode(self.encoding)
-        # append mac to msg_byts
-        msg_mac = msg_byts + self.mac_key
-        # hash msg_mac
-        h0 = hash_init()
-        h0.update(debitize(msg_mac))
-        h_msg_mac = bitize(h0.digest())
-        # return the result
-        return h_msg_mac
+        return hmac(msg_byts)
 
     def decode(self, byts: bytes) -> str:
         '''
@@ -40,4 +33,14 @@ class HmacEncoder:
         '''
         
         return byts.decode(self.encoding)
-# end class HmacEncoder
+
+    def hmac(self, byts: bytes) -> bytes:
+        # append mac to msg_byts
+        msg_mac = (msg_byts + self.mac_key)
+        # hash msg_mac
+        h0 = hash_init()
+        h0.update(debitize(msg_mac))
+        h_msg_mac = bitize(h0.digest())
+        # return the result
+    
+# end class SimpleHmacEncoder
