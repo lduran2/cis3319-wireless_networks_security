@@ -170,14 +170,17 @@ class CharacterEncoder:
         '''
         self.encoding = _encoding
 
-    def encode(self, string: str) -> bytes:
+    def encode(self, string: str) -> 'list[int]':
         '''
         Encodes the given string into bytes using self's character
         encoding.
         @param string: str = to encode
-        @return byte encoding of the string
+        @yield each block in the byte encoding of the string
         '''
-        return string.encode(self.encoding)
+        # encode using character encoding resulting in a byte array
+        byts = string.encode(self.encoding)
+        # yield the blocks in the resulting bytes
+        yield self.yield_block(byts)
 
     def decode(self, byts: bytes) -> str:
         '''
@@ -187,6 +190,32 @@ class CharacterEncoder:
         @return string decoded from the byte array
         '''
         return byts.decode(self.encoding)
+
+    def yield_block(self, byts: bytes) -> bytes:
+        """
+        Yields the bit blocks in byts.
+        Handle block division here.
+        *Inputs are guaranteed to have a length divisible by 8.
+        """
+        # pad if number of bytes if needed
+        byts_pad = bytearray(needed_padding(len(byts)))
+        padded_byts = (byts + byts_pad)
+        if (DEBUG_MODE):
+            print('original length:', len(byts))
+            print('padding created:', len(byts_pad))
+            print('new length:', len(padded_byts))
+        # initialize the bits of the bytes to return
+        cry_all_bits = []
+        # loop through each 8-byte segment (64-bit block), encrypting it
+        for k in range(0, len(padded_byts), 8):
+            # get the segment
+            block = padded_byts[k:(k + 8)]
+            # convert to bits
+            bits = bitize(block)
+            # yield the bits
+            yield bits
+        # next k
+    # end def yield_blocks(self, byts: bytes)
 # end class CharacterEncoder
 
 # create a character encoder using UTF-8
@@ -532,10 +561,10 @@ class DES:
         *Inputs are guaranteed to have a length divisible by 8.
         """
         # TODO: your code here
-        # convert message to bytes
-        msg_bytes = encode(msg_str)
+        # create generator of message to blocks
+        msg_block_generator = encode(msg_str)
         # encrypt these bytes, giving cypher
-        cypher = self.crypt_bytes(msg_bytes, self.enc_block)
+        cypher = self.crypt_bytes(msg_block_generator, self.enc_block)
         return cypher
     
     def decrypt(self, msg_bytes: bytes, decode: 'Callable[[object, bytes], str]'=utf8_encoder.decode) -> str:
@@ -557,16 +586,6 @@ class DES:
         Handle block division here.
         *Inputs are guaranteed to have a length divisible by 8.
         """
-        # pad if number of bytes if needed
-        msg_bytes_pad = bytearray(needed_padding(len(msg_bytes)))
-        padded_msg_bytes = msg_bytes + msg_bytes_pad
-        if (DEBUG_MODE):
-            print('original length:', len(msg_bytes))
-            print('padding created:', len(msg_bytes_pad))
-            print('new length:', len(padded_msg_bytes))
-        # initialize the bits of the bytes to return
-        cry_all_bits = []
-        # loop through each 8-byte segment (64-bit block), encrypting it
         for k in range(0, len(padded_msg_bytes), 8):
             # get the segment
             msg_block = padded_msg_bytes[k:(k + 8)]
