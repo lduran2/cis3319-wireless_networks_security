@@ -63,7 +63,7 @@ class SimpleHmacEncoder:
         # append mac to msg_byts
         msg_mac = (msg_byts + self.mac_key)
         # hash msg_mac
-        h0 = hash_init()
+        h0 = sha256()
         h0.update(msg_mac)
         # return the result
         return h0.digest()
