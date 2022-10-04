@@ -149,6 +149,49 @@ def combine(n: int, m: int, leftBlockN: 'list[int]', rightBlockN: 'list[int]') -
     return (leftBlockN[:n] + rightBlockN[:n])[:m]
 # end def combine(n: int, m: int, leftKeyN: 'list[list[int]]', rightKeyN: 'list[list[int]]')
 
+def needed_padding(i: int, divisor=8):
+    '''
+    Calculates the amount of padding needed to complete a multiple of
+    the divisor.
+    '''
+    return ((-i) % divisor)
+# end def needed_padding(i: int, divisor=8)
+
+class CharacterEncoder:
+    '''
+    Class used to convert between strings and bytes.
+    '''
+
+    def __init__(self, _encoding: str='utf-8'):
+        '''
+        Initializes an encoder.
+        @param _encoding: str = the character set used to encode and
+            decode
+        '''
+        self.encoding = _encoding
+
+    def encode(self, string: str) -> bytes:
+        '''
+        Encodes the given string into bytes using self's character
+        encoding.
+        @param string: str = to encode
+        @return byte encoding of the string
+        '''
+        return string.encode(self.encoding)
+
+    def decode(self, byts: bytes) -> str:
+        '''
+        Decodes the given byte arrays into a string using self's
+        character encoding.
+        @param byts: bytes = to decode
+        @return string decoded from the byte array
+        '''
+        return byts.decode(self.encoding)
+# end class CharacterEncoder
+
+# create a character encoder using UTF-8
+utf8_encoder = CharacterEncoder()
+
 class DES:
 
     # initial permutation
@@ -300,8 +343,8 @@ class DES:
 
         if (DEBUG_MODE):
             print('cipherKey: ', bit2hex(cipherKey))
-            leftKeyPad = ([0] * (8 - len(leftKey) % 8))
-            rightKeyPad = ([0] * (8 - len(rightKey) % 8))
+            leftKeyPad = ([0] * needed_padding(len(leftKey)))
+            rightKeyPad = ([0] * needed_padding(len(rightKey)))
             print(f'[{bit2hex(leftKeyPad + leftKey)}, {bit2hex(rightKeyPad + rightKey)}]')
 
         RoundKeys16x48 = [None] * 16
@@ -316,8 +359,8 @@ class DES:
 
             # print the RoundKey generated if in debug mode
             if (DEBUG_MODE):
-                leftKeyPad = ([0] * (8 - len(leftKey) % 8))
-                rightKeyPad = ([0] * (8 - len(rightKey) % 8))
+                leftKeyPad = ([0] * needed_padding(len(leftKey)))
+                rightKeyPad = ([0] * needed_padding(len(rightKey)))
                 print(f'round #{i_round}: ', end='')
                 print(f'[{bit2hex(leftKeyPad + leftKey)}, {bit2hex(rightKeyPad + rightKey)}]')
                 print(f'key_generation  preround #{i_round}: ', bit2hex(preRoundKey))
@@ -482,7 +525,7 @@ class DES:
         return block_FP
     # end def cry_block(self, block: 'list[int]', keys)
 
-    def encrypt(self, msg_str: str, encoding: str='utf-8') -> bytes:
+    def encrypt(self, msg_str: str, encode: 'Callable[[object, str], bytes]'=utf8_encoder.encode) -> bytes:
         """
         Encrypt the whole message.
         Handle block division here.
@@ -490,12 +533,12 @@ class DES:
         """
         # TODO: your code here
         # convert message to bytes
-        msg_bytes = msg_str.encode(encoding)
+        msg_bytes = encode(msg_str)
         # encrypt these bytes, giving cypher
         cypher = self.crypt_bytes(msg_bytes, self.enc_block)
         return cypher
     
-    def decrypt(self, msg_bytes: bytes, encoding: str='utf-8') -> str:
+    def decrypt(self, msg_bytes: bytes, decode: 'Callable[[object, bytes], str]'=utf8_encoder.decode) -> str:
         """
         Decrypt the whole message.
         Similar to encrypt.
@@ -504,27 +547,23 @@ class DES:
         # decrypt bytes, giving plaintext bytes
         plaintext_bytes = self.crypt_bytes(msg_bytes, self.dec_block)
         # convert to string
-        plaintext_string = str(plaintext_bytes, encoding)
+        plaintext_string = decode(plaintext_bytes)
         return plaintext_string
 
-    def crypt_bytes(self, msg_bytes: bytes, callback: 'Callable[[DES, list[int], list[int]]') -> bytes:
+    def crypt_bytes(self, msg_bytes: bytes, callback: 'Callable[[DES, list[int]], list[int]]') -> bytes:
         """
         Transforms the bit blocks in msg_bytes, using callback, and
         convert back to bytes. 
         Handle block division here.
         *Inputs are guaranteed to have a length divisible by 8.
         """
-        # number of characters past multiple of 8
-        rem = (len(msg_bytes) % 8)
-        # find the needed padding
-        complement = (8 - rem)
-        needed_pad = (complement if complement in range(8) else 0)
-        # pad if number of bytes % 8
-        msg_bytes_pad = (bytearray(needed_pad))
+        # pad if number of bytes if needed
+        msg_bytes_pad = bytearray(needed_padding(len(msg_bytes)))
         padded_msg_bytes = msg_bytes + msg_bytes_pad
         if (DEBUG_MODE):
-            print('padding needed:', (8 - (len(msg_bytes) % 8)))
+            print('original length:', len(msg_bytes))
             print('padding created:', len(msg_bytes_pad))
+            print('new length:', len(padded_msg_bytes))
         # initialize the bits of the bytes to return
         cry_all_bits = []
         # loop through each 8-byte segment (64-bit block), encrypting it
@@ -541,4 +580,4 @@ class DES:
         # convert back to bytes
         cry_all_bytes = bytes(debitize(cry_all_bits))
         return cry_all_bytes
-    
+# end class DES

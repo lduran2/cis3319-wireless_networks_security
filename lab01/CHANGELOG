@@ -1,4 +1,10 @@
 CHANGELOG :
+    v2.0.2 - 2022-09-26t10:15Q
+        config.ini -> config.json
+
+    v2.0.1 - 2022-09-26t09:52Q
+        constants -> config.ini
+
     v1.1.0 - 2022-09-12t16:30Q
         implemented bitize
 

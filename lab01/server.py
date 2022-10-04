@@ -1,9 +1,11 @@
 
 # standard libraries
+import json
 import socket
 
 # local library crypto
-import node
+import run_node
+from run_node import config
 from node import Node
 
 
@@ -62,15 +64,17 @@ class Server:
 # end class Server
 
 
-# address whereat to listen
-SERVER_ADDR = 'localhost'
-SERVER_PORT = 9999
-SERVER_CHARSET = 'utf-8'
-# prompt for input
-PROMPT = 'server> '
+# corresponding section in configuration file
+SECTION = 'server'
+# load connection address, port, character encoding
+SERVER_ADDR, SERVER_PORT, SERVER_CHARSET = (
+    config['server'][key] for key in ('addr', 'port', 'charset'))
+# load prompt for input, connection status
+PROMPT, CONNECTING_STATUS = (
+    config[SECTION][key] for key in ('prompt', 'connecting_status'))
 
 
 # run the server until SENTINEL is given
 if __name__ == '__main__':
-    node.main('listening', Server, SERVER_ADDR, SERVER_PORT, SERVER_CHARSET, PROMPT)
+    run_node.main(CONNECTING_STATUS, Server, SERVER_ADDR, SERVER_PORT, SERVER_CHARSET, PROMPT)
 # end if __name__ == '__main__'

@@ -1,9 +1,11 @@
 
 # standard libraries
+import json
 import socket
 
 # local library crypto
-import node
+import run_node
+from run_node import config
 from node import Node
 
 
@@ -57,13 +59,18 @@ class Client:
 # end class Client
 
 
-# import connection address, port, and character encoding
-from server import SERVER_ADDR, SERVER_PORT, SERVER_CHARSET
-# prompt for input
-PROMPT = 'client> '
+# corresponding section in configuration file
+SECTION = 'client'
+# load connection address, port whereat the server listens
+# load character encoding
+SERVER_ADDR, SERVER_PORT, SERVER_CHARSET = (
+    config['server'][key] for key in ('addr', 'port', 'charset'))
+# load prompt for input, connection status
+PROMPT, CONNECTING_STATUS = (
+    config[SECTION][key] for key in ('prompt', 'connecting_status'))
 
 
-# run the server until SENTINEL is given
+# run the client until SENTINEL is given
 if __name__ == '__main__':
-    node.main('connecting', Client, SERVER_ADDR, SERVER_PORT, SERVER_CHARSET, PROMPT)
+    run_node.main(CONNECTING_STATUS, Client, SERVER_ADDR, SERVER_PORT, SERVER_CHARSET, PROMPT)
 # end if __name__ == '__main__'
