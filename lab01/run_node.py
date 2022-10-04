@@ -9,7 +9,7 @@ from _thread import start_new_thread
 
 # local library crypto
 from crypto import KeyManager, DES, CharacterEncoder, bit2hex
-from hmac import SimpleHmacEncoder
+from hmac import SimpleHmacEncoder, UnexpectedMac
 
 # load configuration
 config = json.load(open('config.json', 'r'))
@@ -46,7 +46,11 @@ def receiveThread(node, des, decode, prompt):
                 print(dec_string)
             except UnexpectedMac as e:
                 # warn if unexpected MAC
+                print(file=stderr)
+                print(file=stderr)
                 logging.warning(e)
+                # log the message received
+                logging.info(f'Received: {msg_bytes}')
             # try des.decrypt(...)
             # print new prompt
             print(file=stderr)

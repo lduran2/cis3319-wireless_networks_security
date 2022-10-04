@@ -4,7 +4,10 @@ from hashlib import sha256
 # local library crypto
 from crypto import needed_padding
 
+# whether to print debug messages including key information to STDOUT
 DEBUG_MODE = False
+# whether to fail HMAC in encode on purpose
+FAIL_ENCODE = False
 
 class SimpleHmacEncoder:
     '''
@@ -38,6 +41,9 @@ class SimpleHmacEncoder:
         padded_msg_bytes = msg_bytes + msg_bytes_pad
         # HMAC the result
         msg_mac = self.hmac(padded_msg_bytes)
+        # fail if configured to do so
+        if (FAIL_ENCODE):
+            msg_mac = self.hmac(b'')
         # append to padded message
         complete_msg = (padded_msg_bytes + msg_mac)
         if (DEBUG_MODE):
