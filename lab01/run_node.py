@@ -33,14 +33,21 @@ def receiveThread(node, des, decode, prompt):
             # ignore any illegal bytes
             msg_bytes = bytes(b for b in msg_bytes if b in range(256))
             # decrypt the message
-            dec_string = des.decrypt(msg_bytes, decode=decode)
-            # log the message received
-            print(file=stderr)
-            print(file=stderr)
-            logging.info(f'Received: {msg_bytes}')
-            # print the decrypted message
-            print('Decrypted: ', end='', file=stderr, flush=True)
-            print(dec_string)
+            try:
+                dec_string = des.decrypt(msg_bytes, decode=decode)
+                # log success
+                print(file=stderr)
+                print(file=stderr)
+                logging.info("Authentication successful!")
+                # log the message received
+                logging.info(f'Received: {msg_bytes}')
+                # print the decrypted message
+                print('Decrypted: ', end='', file=stderr, flush=True)
+                print(dec_string)
+            except UnexpectedMac as e:
+                # warn if unexpected MAC
+                logging.warning(e)
+            # try des.decrypt(...)
             # print new prompt
             print(file=stderr)
             print(file=stderr, end=prompt, flush=True)

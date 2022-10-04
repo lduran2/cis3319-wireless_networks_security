@@ -4,6 +4,8 @@ from hashlib import sha256
 # local library crypto
 from crypto import needed_padding
 
+DEBUG_MODE = False
+
 class SimpleHmacEncoder:
     '''
     Encoder that performs HMAC encoding and HMAC check on decoding.
@@ -31,15 +33,16 @@ class SimpleHmacEncoder:
         '''
         # delegate to parent encoder
         msg_bytes = self.parent.encode(string)
-        # HMAC the result
-        msg_mac = self.hmac(msg_bytes)
         # pad message if needed
         msg_bytes_pad = bytearray(needed_padding(len(msg_bytes)))
         padded_msg_bytes = msg_bytes + msg_bytes_pad
-        # append the HMAC
+        # HMAC the result
+        msg_mac = self.hmac(padded_msg_bytes)
+        # append to padded message
         complete_msg = (padded_msg_bytes + msg_mac)
-        print(f'msg_mac: {msg_mac}')
-        print(f'complet: {complete_msg}')
+        if (DEBUG_MODE):
+            print(f'msg_mac: {msg_mac}')
+            print(f'complet: {complete_msg}')
         # return the result
         return complete_msg
 
@@ -55,14 +58,15 @@ class SimpleHmacEncoder:
         msg_bytes, theo_mac = (byts[:-32], byts[-32:])
         # calculate the mac from the message
         calc_mac = self.hmac(msg_bytes)
+
+        if (DEBUG_MODE):
+            print()
+            print(f'    byts: {byts}')
+            print(f'msg_byts: {msg_bytes}')
+            print(f'theo_mac: {theo_mac}')
+            print(f'calc_mac: {calc_mac}')
+
         # compare MACs
-        print()
-        print(f'    byts: {byts}')
-        print(f'msg_byts: {msg_bytes}')
-        print(f'theo_mac: {theo_mac}')
-        print(f'calc_mac: {calc_mac}')
-        calc_mac = self.hmac(msg_bytes)
-        print(f'calc_mac: {calc_mac}')
         if (theo_mac != calc_mac):
             # if different, throw an exception
             # but do NOT include the calculated MAC
