@@ -1,4 +1,5 @@
 from hashlib import sha256
+import logging
 
 class SimpleHmacEncoder:
     '''
@@ -21,7 +22,9 @@ class SimpleHmacEncoder:
         @param string: str = to encode
         @return byte encoding of the string
         '''
-        msg_byts = self._parent.encode(self.encoding)
+        # delegate to parent encoder
+        msg_byts = self._parent.encode(string)
+        # HMAC the result and return it
         return hmac(msg_byts)
 
     def decode(self, byts: bytes) -> str:
@@ -31,8 +34,21 @@ class SimpleHmacEncoder:
         @param byts: bytes = to decode
         @return string decoded from the byte array
         '''
-        
-        return byts.decode(self.encoding)
+        # split byte array into message, theoretical MAC
+        msg_byts, theo_mac = byts[:-32], byts[-32:]
+        # calculate the mac from the message
+        calc_mac = hmac(msg_byts)
+        # compare MACs
+        if (theo_mac != calc_mac):
+            # if different, give a warning
+            # but do NOT print the log MAC
+            logging.warning(f'Unexpected MAC: expected {theo_mac}')
+        else:
+            # otherwise, continue
+            logging.info(f'Message authenticated.')
+        # delegate msg_byts to parent encoder
+        return self._parent.decode(msg_byts)
+    # end def decode(self, byts: bytes)
 
     def hmac(self, byts: bytes) -> bytes:
         # append mac to msg_byts
