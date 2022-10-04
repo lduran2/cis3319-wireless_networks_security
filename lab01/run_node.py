@@ -9,6 +9,7 @@ from _thread import start_new_thread
 
 # local library crypto
 from crypto import KeyManager, DES, CharacterEncoder, bit2hex
+from hmac import SimpleHmacEncoder
 
 # load configuration
 config = json.load(open('config.json', 'r'))
@@ -71,7 +72,11 @@ def main(connecting_status: str, node_init: 'Callable[[addr, port], Node]', addr
     des = DES(enc_key)
 
     # create the encoder
-    serverEncoder = CharacterEncoder(encoding)
+    # use the given encoding
+    charEncoder = CharacterEncoder(encoding)
+    # and use HMAC encoding
+    serverEncoder = SimpleHmacEncoder(charEncoder, mac_key)
+    # fetch decode
     decode = serverEncoder.decode
 
     # start the receiving thread
