@@ -9,6 +9,7 @@ from _thread import start_new_thread
 
 # local library crypto
 from crypto import KeyManager, DES, CharacterEncoder, bit2hex
+from hmac import SimpleHmacEncoder, UnexpectedMac
 
 # load configuration
 config = json.load(open('config.json', 'r'))
@@ -32,14 +33,25 @@ def receiveThread(node, des, decode, prompt):
             # ignore any illegal bytes
             msg_bytes = bytes(b for b in msg_bytes if b in range(256))
             # decrypt the message
-            dec_string = des.decrypt(msg_bytes, decode=decode)
-            # log the message received
-            print(file=stderr)
-            print(file=stderr)
-            logging.info(f'Received: {msg_bytes}')
-            # print the decrypted message
-            print('Decrypted: ', end='', file=stderr, flush=True)
-            print(dec_string)
+            try:
+                dec_string = des.decrypt(msg_bytes, decode=decode)
+                # log success
+                print(file=stderr)
+                print(file=stderr)
+                logging.info("Authentication successful!")
+                # log the message received
+                logging.info(f'Received: {msg_bytes}')
+                # print the decrypted message
+                print('Decrypted: ', end='', file=stderr, flush=True)
+                print(dec_string)
+            except UnexpectedMac as e:
+                # warn if unexpected MAC
+                print(file=stderr)
+                print(file=stderr)
+                logging.warning(e)
+                # log the message received
+                logging.info(f'Received: {msg_bytes}')
+            # try des.decrypt(...)
             # print new prompt
             print(file=stderr)
             print(file=stderr, end=prompt, flush=True)
@@ -71,7 +83,11 @@ def main(connecting_status: str, node_init: 'Callable[[addr, port], Node]', addr
     des = DES(enc_key)
 
     # create the encoder
-    serverEncoder = CharacterEncoder(encoding)
+    # use the given encoding
+    charEncoder = CharacterEncoder(encoding)
+    # and use HMAC encoding
+    serverEncoder = SimpleHmacEncoder(charEncoder, mac_key)
+    # fetch decode
     decode = serverEncoder.decode
 
     # start the receiving thread
