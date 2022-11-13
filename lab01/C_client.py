@@ -1,6 +1,7 @@
 
 # standard libraries
 import json
+import logging
 import socket
 
 # local library crypto
@@ -72,5 +73,13 @@ PROMPT, CONNECTING_STATUS = (
 
 # run the client until SENTINEL is given
 if __name__ == '__main__':
-    run_node.main(CONNECTING_STATUS, Client, V_SERVER_ADDR, V_SERVER_PORT, V_SERVER_CHARSET, PROMPT)
+    # configure the logger
+    logging.basicConfig(level=logging.INFO)
+    # create a node
+    logging.info(f'{CONNECTING_STATUS} {V_SERVER_ADDR}:{V_SERVER_PORT} . . .')
+    vClient = Client(V_SERVER_ADDR, V_SERVER_PORT)
+    # encode and send user input, decode messages received
+    run_node.encodeDecode(vClient, V_SERVER_CHARSET, PROMPT)
+    # close the node
+    vClient.close()
 # end if __name__ == '__main__'

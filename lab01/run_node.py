@@ -9,6 +9,7 @@ from _thread import start_new_thread
 
 # local library crypto
 from crypto import KeyManager, DES, CharacterEncoder, bit2hex
+from node import Node
 
 # load configuration
 config = json.load(open('config.json', 'r'))
@@ -58,10 +59,20 @@ def receiveThread(node, des, decode, prompt):
 def main(connecting_status: str, node_init: 'Callable[[addr, port], Node]', addr: str, port: int, encoding: str, prompt: str):
     # configure the logger
     logging.basicConfig(level=logging.INFO)
-
     # create a node
     logging.info(f'{connecting_status} {addr}:{port} . . .')
     node = node_init(addr, port)
+    # encode and send user input, decode messages received
+    encodeDecode(node, encoding, prompt)
+    # close the node
+    node.close()
+# end main(connecting_status: str, node_init: 'Callable[[addr, port], Node]', addr: str, port: int, encoding: str, prompt: str)
+
+# run the node until SENTINEL is given
+def encodeDecode(node: Node, encoding: str, prompt: str):
+    # configure the logger
+    logging.basicConfig(level=logging.INFO)
+
     # read in the key word for encryption
     enc_key = KeyManager.read_key(ENC_FILE)
     # read in the key word for HMAC
@@ -92,7 +103,4 @@ def main(connecting_status: str, node_init: 'Callable[[addr, port], Node]', addr
         logging.info(f'Sending cypher: {cyp_bytes}')
         node.send(cyp_bytes)
     # end while True
-
-    # close the node
-    node.close()
-# end main(connecting_status: str, node_init: 'Callable[[addr, port], Node]', addr: str, port: int, encoding: str, prompt: str)
+# end handleInput(encoding: str, prompt: str)
