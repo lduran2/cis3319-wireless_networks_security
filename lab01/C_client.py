@@ -63,7 +63,7 @@ class Client:
 SECTION = 'C_client'
 # load connection address, port whereat the server listens
 # load character encoding
-SERVER_ADDR, SERVER_PORT, SERVER_CHARSET = (
+V_SERVER_ADDR, V_SERVER_PORT, V_SERVER_CHARSET = (
     config['V_server'][key] for key in ('addr', 'port', 'charset'))
 # load prompt for input, connection status
 PROMPT, CONNECTING_STATUS = (
@@ -72,5 +72,5 @@ PROMPT, CONNECTING_STATUS = (
 
 # run the client until SENTINEL is given
 if __name__ == '__main__':
-    run_node.main(CONNECTING_STATUS, Client, SERVER_ADDR, SERVER_PORT, SERVER_CHARSET, PROMPT)
+    run_node.main(CONNECTING_STATUS, Client, V_SERVER_ADDR, V_SERVER_PORT, V_SERVER_CHARSET, PROMPT)
 # end if __name__ == '__main__'
