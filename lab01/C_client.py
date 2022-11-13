@@ -60,11 +60,11 @@ class Client:
 
 
 # corresponding section in configuration file
-SECTION = 'client'
+SECTION = 'C_client'
 # load connection address, port whereat the server listens
 # load character encoding
 SERVER_ADDR, SERVER_PORT, SERVER_CHARSET = (
-    config['server'][key] for key in ('addr', 'port', 'charset'))
+    config['V_server'][key] for key in ('addr', 'port', 'charset'))
 # load prompt for input, connection status
 PROMPT, CONNECTING_STATUS = (
     config[SECTION][key] for key in ('prompt', 'connecting_status'))
