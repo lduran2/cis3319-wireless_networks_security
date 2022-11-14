@@ -5,6 +5,7 @@ import logging
 import traceback
 from sys import stderr
 from _thread import start_new_thread
+from collections import namedtuple
 
 
 # local library crypto
@@ -14,12 +15,31 @@ from hmac import SimpleHmacEncoder, UnexpectedMac
 # load configuration
 config = json.load(open('config.json', 'r'))
 
+# the keys for server configurations
+SERVERS_CONFIG_DATA_KEYS = 'V_server, AS_TGS_server'.split(', ')
+SERVER_DATA_KEYS = 'addr,port,charset'.split(',')
+# named tuple to store server configuration
+ServerData = namedtuple('ServerData', SERVER_DATA_KEYS)
+# set up the configuration data for exporting
+servers_config_data = {
+    server: ServerData(*(config[server][key] for key in SERVER_DATA_KEYS))
+        for server in SERVERS_CONFIG_DATA_KEYS }
+
+# the keys for ode configurations
+NODE_CONFIG_DATA_KEYS = 'V_server, AS_TGS_server, C_client'.split(', ')
+NODE_DATA_KEYS = 'prompt, connecting_status'.split(', ')
+# named tuple to store node configuration
+NodeData = namedtuple('NodeData', NODE_DATA_KEYS)
+# set up the configuration data for exporting
+nodes_config_data = {
+    node: NodeData(*(config[node][key] for key in NODE_DATA_KEYS))
+        for node in NODE_CONFIG_DATA_KEYS }
+
 # load name of files containing the keys
 ENC_FILE, MAC_FILE = (
     config['node'][key] for key in ('enc_key_file', 'mac_key_file'))
 # load string that ends the input stream
 SENTINEL = config['node']['sentinel']
-
 
 def receiveThread(node, des, decode, prompt):
     old_tb = None
@@ -66,8 +86,19 @@ def receiveThread(node, des, decode, prompt):
     # end while True
 # end def receiveThread(node, des, encoding)
 
-# run the node until SENTINEL is given
+def main_ns(node_data, server_data, node_init: 'Callable[[addr, port], Node]'):
+    '''
+    Run the node until SENTINEL is input using the given configuration
+    tuples.  Convenience function.
+    '''
+    main(node_data.connecting_status, node_init,
+        server_data.addr, server_data.port, server_data.charset,
+        node_data.prompt)
+
 def main(connecting_status: str, node_init: 'Callable[[addr, port], Node]', addr: str, port: int, encoding: str, prompt: str):
+    '''
+    Run the node until SENTINEL is input using the given parameters.
+    '''
     # configure the logger
     logging.basicConfig(level=logging.INFO)
 

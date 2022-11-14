@@ -5,7 +5,7 @@ import socket
 
 # local library crypto
 import run_node
-from run_node import config
+from run_node import servers_config_data, nodes_config_data
 from node import Node
 
 
@@ -69,15 +69,12 @@ ID = "CIS3319SERVERID"
 
 # corresponding section in configuration file
 SECTION = 'V_server'
-# load connection address, port, character encoding
-SERVER_ADDR, SERVER_PORT, SERVER_CHARSET = (
-    config['V_server'][key] for key in ('addr', 'port', 'charset'))
-# load prompt for input, connection status
-PROMPT, CONNECTING_STATUS = (
-    config[SECTION][key] for key in ('prompt', 'connecting_status'))
-
+# load server data
+SERVER = servers_config_data[SECTION]
+# load node data
+NODE = nodes_config_data[SECTION]
 
 # run the server until SENTINEL is given
 if __name__ == '__main__':
-    run_node.main(CONNECTING_STATUS, Server, SERVER_ADDR, SERVER_PORT, SERVER_CHARSET, PROMPT)
+    run_node.main_ns(NODE, SERVER, Server)
 # end if __name__ == '__main__'
