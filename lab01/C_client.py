@@ -65,7 +65,7 @@ ID = "CIS3319USERID"
 # corresponding section in configuration file
 SECTION = 'C_client'
 # split data for both V_server and AS_TGS_server
-AS_TGS_SERVER, V_SERVER = (
+V_SERVER, AS_TGS_SERVER = (
     servers_config_data[server] for server in ('V_server', 'AS_TGS_server'))
 # load node data
 NODE = nodes_config_data[SECTION]
