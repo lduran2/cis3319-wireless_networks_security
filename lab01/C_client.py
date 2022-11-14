@@ -59,6 +59,9 @@ class Client:
 # end class Client
 
 
+# ID for this node
+ID = "CIS3319USERID"
+
 # corresponding section in configuration file
 SECTION = 'C_client'
 # load connection address, port whereat the server listens

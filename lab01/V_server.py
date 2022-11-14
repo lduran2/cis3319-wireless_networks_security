@@ -64,6 +64,9 @@ class Server:
 # end class Server
 
 
+# ID for this node
+ID = "CIS3319SERVERID"
+
 # corresponding section in configuration file
 SECTION = 'V_server'
 # load connection address, port, character encoding

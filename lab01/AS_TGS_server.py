@@ -65,6 +65,9 @@ class AG_TGS_Server:
 # end class Server
 
 
+# ID for this node
+ID = "CIS3319TGSID"
+
 # corresponding section in configuration file
 SECTION = 'AS_TGS_server'
 # load connection address, port, character encoding
