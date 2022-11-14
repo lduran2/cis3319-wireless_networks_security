@@ -7,9 +7,10 @@ import socket
 import run_node
 from run_node import config
 from node import Node
+from V_server import Server
 
 
-class Server:
+class AG_TGS_Server:
     '''
     A simple socket server.
     '''
