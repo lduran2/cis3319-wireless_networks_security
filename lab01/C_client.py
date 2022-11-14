@@ -73,5 +73,5 @@ NODE = nodes_config_data[SECTION]
 
 # run the client until SENTINEL is given
 if __name__ == '__main__':
-    run_node.main(NODE.connecting_status, Client, V_SERVER.addr, V_SERVER.port, V_SERVER.charset, NODE.prompt)
+    run_node.main_ns(NODE, V_SERVER, Client)
 # end if __name__ == '__main__'

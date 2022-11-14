@@ -86,8 +86,19 @@ def receiveThread(node, des, decode, prompt):
     # end while True
 # end def receiveThread(node, des, encoding)
 
-# run the node until SENTINEL is given
+def main_ns(node_data, server_data, node_init: 'Callable[[addr, port], Node]'):
+    '''
+    Run the node until SENTINEL is input using the given configuration
+    tuples.  Convenience function.
+    '''
+    main(node_data.connecting_status, node_init,
+        server_data.addr, server_data.port, server_data.charset,
+        node_data.prompt)
+
 def main(connecting_status: str, node_init: 'Callable[[addr, port], Node]', addr: str, port: int, encoding: str, prompt: str):
+    '''
+    Run the node until SENTINEL is input using the given parameters.
+    '''
     # configure the logger
     logging.basicConfig(level=logging.INFO)
 
