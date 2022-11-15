@@ -14,6 +14,11 @@ from node import Node
 from V_server import Server
 
 
+# debug modes
+FAIL_TS2 = False
+FAIL_TS4 = False
+
+
 class AG_TGS_Server:
     '''
     A simple socket server.
@@ -87,7 +92,7 @@ KEY_CHARSET = 'Latin-1'
 # the lifetimes of tickets
 Lifetimes = { 2: 60, 4: 86400 } # [s]
 # expired ticket message
-TICKET_EXPIRED = "This ticket has expired.".encode(SERVER.charset)
+TICKET_EXPIRED = "This ticket has expired."
 
 
 class TicketValidity(Enum):
@@ -108,13 +113,6 @@ class TicketValidity(Enum):
         # filter out any expired ticket
         return TicketValidity.valueOf(now - timestamp < lifetime)
 
-# def rightTrimNull(byts):
-    # for k in range(-1, -(len(byts) + 1), -1):
-        # if (byts[k]):
-            # return byts[:k+1]
-    # return byts
-# # end def rightTrimNull(byts)
-
 def requestKerberos(node_data, server_data):
     # configure the logger
     logging.basicConfig(level=logging.INFO)
@@ -125,11 +123,9 @@ def requestKerberos(node_data, server_data):
     server = Server(server_data.addr, server_data.port)
 
     # read each key
-    Kc, K_tgs, Kv = (KeyManager.read_key(file)
+    # and create DES for Ktgs and Kc
+    DES_tgs, DES_c, DES_v = (DES(KeyManager.read_key(file))
         for file in config['kerberos_keys'].values())
-    
-    # create DES for Ktgs and Kc
-    DES_tgs, DES_c = (DES(key) for key in (K_tgs, Kc))
 
     try:
         # loop indefinitely
@@ -154,9 +150,15 @@ def requestKerberos(node_data, server_data):
 
             # (2Tx) AS -> C:    E(Kc, [K_c_tgs || ID_tgs || TS2 || Lifetime2 || Ticket_tgs])
             # create a random key for C/TGS
-            K_c_tgs_chars = urandom(DES_KEY_SIZE).decode(KEY_CHARSET)
+            K_c_tgs_byts = urandom(DES_KEY_SIZE)
+            K_c_tgs_chars = K_c_tgs_byts.decode(KEY_CHARSET)
+            DES_c_tgs = DES(K_c_tgs_byts)
             # get a time stamp
             TS2 = time.time()
+            # clear if need to fail
+            if (FAIL_TS2):
+                TS2 = 0
+            # end if (FAIL_TS2)
 
             # concatenate the ticket
             plain_Ticket_tgs = f'{K_c_tgs_chars}||{ID_c}||{AD_c}||{ID_tgs}||{TS2}||{Lifetimes[2]}'
@@ -216,13 +218,35 @@ def requestKerberos(node_data, server_data):
             print(f'This ticket is {Ticket_tgs_1o_validity.name}.')
             # filter out any expired ticket
             if (not(Ticket_tgs_1o_validity)):
+                # encrypt an expiration message
+                cipher_expire = DES_c_tgs.encrypt(TICKET_EXPIRED)
                 # send expiration message
-                server.send(TICKET_EXPIRED)
+                server.send(cipher_expire)
                 # listen for a new message
                 continue
             # end if (now - TS2_1o >= Lifetime2_1o)
             
+            # (4Tx) TGS -> C: E(K_c_v, [K_c_v || ID_v || TS4 || Ticket_v])
+            # create a random key for C/V
+            K_c_v_chars = urandom(DES_KEY_SIZE).decode(KEY_CHARSET)
+            # get a time stamp
+            TS4 = time.time()
+
+            # concatenate the ticket
+            plain_Ticket_v = f'{K_c_v_chars}||{ID_c}||{AD_c}||{ID_v}||{TS4}||{Lifetimes[4]}'
+            # encrypt the ticket
+            logging.info(f'(4) Encrypting plain: {plain_Ticket_v}')
+            cipher_Ticket_v_byts = DES_v.encrypt(plain_Ticket_v)
+            cipher_Ticket_v_chars = cipher_Ticket_v_byts.decode(KEY_CHARSET)
             
+            # concatenate the message
+            plain_shared_key_ticket = f'{K_c_v_chars}||{ID_v}||{TS4}||{Lifetimes[4]}||{cipher_Ticket_v_chars}'
+            # encrypt the message
+            logging.info(f'(4) Sending plain: {plain_shared_key_ticket}')
+            cipher_shared_key_ticket = DES_c_tgs.encrypt(plain_shared_key_ticket)
+            # send it
+            server.send(cipher_shared_key_ticket)
+
         # end while True
     finally:
         # close the node
