@@ -4,6 +4,11 @@
         "mac_key_file": "mac_key.txt",
         "sentinel": "exit"
     },
+    "kerberos_keys": {
+        "Kv": "Kv.txt",
+        "K_tgs": "K_tgs.txt",
+        "Kc": "Kc.txt",
+    },
     "V_server": {
         "prompt": "V_server> ",
         "connecting_status": "listening to",
