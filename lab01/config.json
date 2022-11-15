@@ -5,9 +5,9 @@
         "sentinel": "exit"
     },
     "kerberos_keys": {
-        "Kv": "Kv.txt",
-        "K_tgs": "K_tgs.txt",
-        "Kc": "Kc.txt",
+        "Kc_file": "Kc.txt",
+        "K_tgs_file": "K_tgs.txt",
+        "Kv_file": "Kv.txt"
     },
     "V_server": {
         "prompt": "V_server> ",

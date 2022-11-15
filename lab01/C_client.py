@@ -2,10 +2,12 @@
 # standard libraries
 import logging
 import time
+from sys import stderr
 
 # local library crypto
 import run_node
-from run_node import servers_config_data, nodes_config_data
+from run_node import servers_config_data, nodes_config_data, config
+from crypto import KeyManager, DES
 from node import Node
 from AS_TGS_server import ID as ID_tgs
 
@@ -80,14 +82,43 @@ def requestKerberos(client_data, server_data):
     logging.info(f'{client_data.connecting_status} {server_data.addr}:{server_data.port} . . .')
     client = Client(server_data.addr, server_data.port)
 
+    # read each key
+    Kc = KeyManager.read_key(config['kerberos_keys']['Kc_file'])
+    
+    # create DES for Ktgs and Kc
+    DES_c = DES(Kc)
+
+    # (1Tx) C -> AS:  ID_c || ID_tgs || TS1
     # get a time stamp
-    TS = time.time()
+    TS1 = time.time()
     # create the client authentication
-    client_auth = f'{ID}||{ID_tgs}||{TS}'
+    client_auth = f'{ID}||{ID_tgs}||{TS1}'
     # send the client authentication message
-    logging.info(f'Sending cypher: {client_auth}')
+    logging.info(f'(1) Sending plain: {client_auth}')
     client_auth_bytes = client_auth.encode(server_data.charset)
     client.send(client_auth_bytes)
+
+    # (2Rx) AS -> C:    E(Kc, [K_c_tgs || ID_tgs || TS2 || Lifetime2 || Ticket_tgs])
+    # initialize empty to start the loop
+    msg_bytes = bytes()
+    # read in from node until bytes are read
+    while (not(msg_bytes)):
+        msg_bytes = client.recv()
+
+    # decrypt the message
+    msg_chars = DES_c.decrypt(msg_bytes)
+    # log the message received
+    logging.info(f'(2Rx) Received: {msg_bytes}')
+    # print the decoded message
+    print(file=stderr, flush=True)
+    print('Decrypted: ', end='', file=stderr, flush=True)
+    print(msg_chars)
+    # split the message
+    K_c_tgs, ID_tgs2, TS2, Lifetime2, Ticket_tgs = msg_chars.split('||')
+    # print the ticket
+    print(file=stderr, flush=True)
+    print('Ticket_tgs: ', end='', file=stderr, flush=True)
+    print(Ticket_tgs)
 # end def requestKerberos()
 
 
