@@ -9,7 +9,8 @@ import run_node
 from run_node import servers_config_data, nodes_config_data, config
 from crypto import KeyManager, DES
 from node import Node
-from AS_TGS_server import ID as ID_tgs
+from AS_TGS_server import ID as ID_tgs, KEY_CHARSET
+from V_server import ID as ID_v
 
 
 class Client:
@@ -79,13 +80,14 @@ def requestKerberos(client_data, server_data):
     logging.basicConfig(level=logging.INFO)
 
     # create the Kerberos client
-    logging.info(f'{client_data.connecting_status} {server_data.addr}:{server_data.port} . . .')
+    AD_c = f'{server_data.addr}:{server_data.port}'
+    logging.info(f'{client_data.connecting_status} {AD_c} . . .')
     client = Client(server_data.addr, server_data.port)
 
-    # read each key
+    # read the key for C/AS
     Kc = KeyManager.read_key(config['kerberos_keys']['Kc_file'])
     
-    # create DES for Ktgs and Kc
+    # create DES for Kc
     DES_c = DES(Kc)
 
     # (1Tx) C -> AS:  ID_c || ID_tgs || TS1
@@ -113,12 +115,32 @@ def requestKerberos(client_data, server_data):
     print(file=stderr, flush=True)
     print('Decrypted: ', end='', file=stderr, flush=True)
     print(msg_chars)
+    print(file=stderr, flush=True)
     # split the message
     K_c_tgs, ID_tgs2, TS2, Lifetime2, Ticket_tgs = msg_chars.split('||')
     # print the ticket
-    print(file=stderr, flush=True)
     print('Ticket_tgs: ', end='', file=stderr, flush=True)
     print(Ticket_tgs)
+    print(file=stderr, flush=True)
+    # create DES for K_c_tgs
+    DES_c_tgs = DES(K_c_tgs.encode(KEY_CHARSET))
+    
+    # (3Tx) C -> TGS: ID_v || Ticket_tgs || Authenticator_c
+    # get a time stamp
+    TS3 = time.time()
+
+    # create the authenticator
+    plain_Authenticator_c = f'{ID}||{AD_c}||{TS3}'
+    # encrypt the authenticator
+    logging.info(f'(3) Encrypting plain: {plain_Authenticator_c}')
+    cipher_Authenticator_c = DES_c_tgs.encrypt(plain_Authenticator_c)
+
+    # concatenate the message
+    server_ID_client_auth = f'{ID_v}||{Ticket_tgs}||{cipher_Authenticator_c}'
+    # send the client authentication message
+    logging.info(f'(3) Sending plain: {server_ID_client_auth}')
+    server_ID_client_auth_bytes = client_auth.encode(server_data.charset)
+    client.send(server_ID_client_auth_bytes)
 # end def requestKerberos()
 
 
