@@ -108,7 +108,7 @@ def main(connecting_status: str, node_init: 'Callable[[addr, port], Node]', addr
     # read in the key word for encryption
     enc_key = KeyManager.read_key(ENC_FILE)
     # read in the key word for HMAC
-    mac_key = KeyManager().read_key(MAC_FILE)
+    mac_key = KeyManager.read_key(MAC_FILE)
     # generate the DES key for encryption
     # and reverse key for decryption
     des = DES(enc_key)

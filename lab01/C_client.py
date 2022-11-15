@@ -9,7 +9,7 @@ import run_node
 from run_node import servers_config_data, nodes_config_data, config
 from crypto import KeyManager, DES
 from node import Node
-from AS_TGS_server import ID as ID_tgs, KEY_CHARSET
+from AS_TGS_server import ID as ID_tgs, KEY_CHARSET, TICKET_EXPIRED
 from V_server import ID as ID_v
 
 
@@ -96,7 +96,7 @@ def requestKerberos(client_data, server_data):
     # create the client authentication
     client_auth = f'{ID}||{ID_tgs}||{TS1}'
     # send the client authentication message
-    logging.info(f'(1) Sending plain: {client_auth}')
+    logging.info(f'(1) Sending plain: [{client_auth}]')
     client_auth_bytes = client_auth.encode(server_data.charset)
     client.send(client_auth_bytes)
 
@@ -113,15 +113,15 @@ def requestKerberos(client_data, server_data):
     logging.info(f'(2Rx) Received: {msg_bytes}')
     # print the decoded message
     print(file=stderr, flush=True)
-    print('Decrypted: ', end='', file=stderr, flush=True)
+    print('Decrypted: [', end='', file=stderr, flush=True)
     print(msg_chars)
-    print(file=stderr, flush=True)
+    print(']', file=stderr, flush=True)
     # split the message
-    K_c_tgs, ID_tgs2, TS2, Lifetime2, Ticket_tgs = msg_chars.split('||')
+    K_c_tgs, ID_tgs_1o, TS2, Lifetime2, Ticket_tgs = msg_chars.split('||')
     # print the ticket
-    print('Ticket_tgs: ', end='', file=stderr, flush=True)
+    print('Ticket_tgs: "', end='', file=stderr, flush=True)
     print(Ticket_tgs)
-    print(file=stderr, flush=True)
+    print('"', file=stderr, flush=True)
     # create DES for K_c_tgs
     DES_c_tgs = DES(K_c_tgs.encode(KEY_CHARSET))
     
@@ -139,8 +139,24 @@ def requestKerberos(client_data, server_data):
     server_ID_client_auth = f'{ID_v}||{Ticket_tgs}||{cipher_Authenticator_c}'
     # send the client authentication message
     logging.info(f'(3) Sending plain: {server_ID_client_auth}')
-    server_ID_client_auth_bytes = client_auth.encode(server_data.charset)
+    server_ID_client_auth_bytes = server_ID_client_auth.encode(server_data.charset)
     client.send(server_ID_client_auth_bytes)
+
+    # (3'Rx) C -> TGS: ID_v || Ticket_tgs || Authenticator_c
+    # initialize empty to start the loop
+    msg_bytes = bytes()
+    # read in from node until bytes are read
+    while (not(msg_bytes)):
+        msg_bytes = client.recv()
+
+    # check if expired
+    # decrypt the message
+    msg_chars = msg_bytes.decode(server_data.charset)
+    # log the message received
+    logging.info(f'(2Rx) Received: {msg_chars}')
+    if (TICKET_EXPIRED==msg_bytes):
+        return
+
 # end def requestKerberos()
 
 
