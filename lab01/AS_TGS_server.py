@@ -1,7 +1,9 @@
 
 # standard libraries
-import json
-import socket
+import logging
+import traceback
+from sys import stderr
+from _thread import start_new_thread
 
 # local library crypto
 import run_node
@@ -75,8 +77,39 @@ SERVER = servers_config_data[SECTION]
 # load node data
 NODE = nodes_config_data[SECTION]
 
+
+def requestKerberos(node_data, server_data):
+    # configure the logger
+    logging.basicConfig(level=logging.INFO)
+
+    # create the Kerberos server
+    logging.info(f'{node_data.connecting_status} {server_data.addr}:{server_data.port} . . .')
+    server = Server(server_data.addr, server_data.port)
+
+    try:
+        # loop indefinitely
+        while True:
+            # initialize empty to start the loop
+            msg_bytes = bytes()
+            # read in from node until bytes are read
+            while (not(msg_bytes)):
+                msg_bytes = server.recv()
+            # decode the message
+            msg_chars = msg_bytes.decode(server_data.charset)
+            # log the message received
+            logging.info(f'Received: {msg_bytes}')
+            # print the decoded message
+            print('Decoded: ', end='', file=stderr, flush=True)
+            print(msg_chars)
+        # end while True
+    finally:
+        # close the node
+        server.close()
+# end 
+
+
 # run the server until SENTINEL is given
 if __name__ == '__main__':
-    run_node.main_ns(NODE, SERVER, Server)
+    requestKerberos(NODE, SERVER)
 # end if __name__ == '__main__'
 
