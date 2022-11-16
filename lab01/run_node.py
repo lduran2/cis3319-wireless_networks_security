@@ -10,6 +10,7 @@ from collections import namedtuple
 
 # local library crypto
 from crypto import KeyManager, DES, CharacterEncoder, bit2hex
+from node import Node
 from hmac import SimpleHmacEncoder, UnexpectedMac
 
 # load configuration
@@ -84,20 +85,22 @@ def receiveThread(node, des, decode, prompt):
             old_tb = tb
             continue
     # end while True
-# end def receiveThread(node, des, encoding)
+# end def receiveThread(node, des, charset)
 
 def main_ns(node_data, server_data, node_init: 'Callable[[addr, port], Node]'):
     '''
     Run the node until SENTINEL is input using the given configuration
     tuples.  Convenience function.
+    This implementation handles the entire life cycle.
     '''
-    main(node_data.connecting_status, node_init,
+    return main(node_data.connecting_status, node_init,
         server_data.addr, server_data.port, server_data.charset,
         node_data.prompt)
 
-def main(connecting_status: str, node_init: 'Callable[[addr, port], Node]', addr: str, port: int, encoding: str, prompt: str):
+def main(connecting_status: str, node_init: 'Callable[[addr, port], Node]', addr: str, port: int, charset: str, prompt: str):
     '''
     Run the node until SENTINEL is input using the given parameters.
+    This implementation handles the entire life cycle.
     '''
     # configure the logger
     logging.basicConfig(level=logging.INFO)
@@ -105,13 +108,16 @@ def main(connecting_status: str, node_init: 'Callable[[addr, port], Node]', addr
     logging.info(f'{connecting_status} {addr}:{port} . . .')
     node = node_init(addr, port)
     # encode and send user input, decode messages received
-    encodeDecode(node, encoding, prompt)
+    run_node(node, charset, prompt)
     # close the node
     node.close()
-# end main(connecting_status: str, node_init: 'Callable[[addr, port], Node]', addr: str, port: int, encoding: str, prompt: str)
+# end main(connecting_status: str, node_init: 'Callable[[addr, port], Node]', addr: str, port: int, charset: str, prompt: str)
 
 # run the node until SENTINEL is given
-def encodeDecode(node: Node, encoding: str, prompt: str):
+def run_node(node: Node, charset: str, prompt: str):
+    '''
+    Runs an existing node.
+    '''
     # configure the logger
     logging.basicConfig(level=logging.INFO)
 
@@ -124,9 +130,9 @@ def encodeDecode(node: Node, encoding: str, prompt: str):
     des = DES(enc_key)
 
     # create the encoder
-    # use the given encoding
-    charEncoder = CharacterEncoder(encoding)
-    # and use HMAC encoding
+    # use the given charset
+    charEncoder = CharacterEncoder(charset)
+    # and use HMAC charset
     serverEncoder = SimpleHmacEncoder(charEncoder, mac_key)
     # fetch decode
     decode = serverEncoder.decode
@@ -149,4 +155,4 @@ def encodeDecode(node: Node, encoding: str, prompt: str):
         logging.info(f'Sending cypher: {cyp_bytes}')
         node.send(cyp_bytes)
     # end while True
-# end handleInput(encoding: str, prompt: str)
+# end run_node(node: Node, charset: str, prompt: str)

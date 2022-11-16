@@ -75,14 +75,14 @@ V_SERVER, AS_TGS_SERVER = (
 CLIENT = nodes_config_data[SECTION]
 
 
-def requestKerberos(client_data, server_data):
+def requestKerberos(client_data, atgs_data, v_server_data):
     # configure the logger
     logging.basicConfig(level=logging.INFO)
 
     # create the Kerberos client
-    AD_c = f'{server_data.addr}:{server_data.port}'
+    AD_c = f'{atgs_data.addr}:{atgs_data.port}'
     logging.info(f'{client_data.connecting_status} {AD_c} . . .')
-    client = Client(server_data.addr, server_data.port)
+    atgsClient = Client(atgs_data.addr, atgs_data.port)
 
     # read the key for C/AS
     Kc = KeyManager.read_key(config['kerberos_keys']['Kc_file'])
@@ -97,15 +97,15 @@ def requestKerberos(client_data, server_data):
     client_auth = f'{ID}||{ID_tgs}||{TS1}'
     # send the client authentication message
     logging.info(f'(1) Sending plain: [{client_auth}]')
-    client_auth_bytes = client_auth.encode(server_data.charset)
-    client.send(client_auth_bytes)
+    client_auth_bytes = client_auth.encode(atgs_data.charset)
+    atgsClient.send(client_auth_bytes)
 
     # (2Rx) AS -> C:    E(Kc, [K_c_tgs || ID_tgs || TS2 || Lifetime2 || Ticket_tgs])
     # initialize empty to start the loop
     msg_bytes = bytes()
     # read in from node until bytes are read
     while (not(msg_bytes)):
-        msg_bytes = client.recv()
+        msg_bytes = atgsClient.recv()
 
     # decrypt the message
     msg_chars = DES_c.decrypt(msg_bytes)
@@ -139,15 +139,15 @@ def requestKerberos(client_data, server_data):
     Ticket_tgs_server_ID_client_auth = f'{ID_v}||{Ticket_tgs}||{cipher_Authenticator_c1}'
     # send the client authentication message
     logging.info(f'(3) Sending plain: {Ticket_tgs_server_ID_client_auth}')
-    Ticket_tgs_server_ID_client_auth_bytes = Ticket_tgs_server_ID_client_auth.encode(server_data.charset)
-    client.send(Ticket_tgs_server_ID_client_auth_bytes)
+    Ticket_tgs_server_ID_client_auth_bytes = Ticket_tgs_server_ID_client_auth.encode(atgs_data.charset)
+    atgsClient.send(Ticket_tgs_server_ID_client_auth_bytes)
 
     # (3'Rx)
     # initialize empty to start the loop
     msg_bytes = bytes()
     # read in from node until bytes are read
     while (not(msg_bytes)):
-        msg_bytes = client.recv()
+        msg_bytes = atgsClient.recv()
 
     # check if expired
     # decrypt the message
@@ -183,29 +183,27 @@ def requestKerberos(client_data, server_data):
     cipher_Authenticator_c2 = DES_c_tgs.encrypt(plain_Authenticator_c2)
 
     # end connection with AS/TGS
-    client.close()
+    atgsClient.close()
+
+    # create the chat client
+    logging.info(f'{client_data.connecting_status} {v_server_data.addr}:{v_server_data.port} . . .')
+    vClient = Client(v_server_data.addr, v_server_data.port)
 
     # concatenate the message
     Ticket_v_client_auth = f'{Ticket_v}||{cipher_Authenticator_c2}'
     # send the client authentication message
     logging.info(f'(5) Sending plain: {Ticket_v_client_auth}')
-    Ticket_tgs_server_ID_client_auth_bytes = Ticket_tgs_server_ID_client_auth.encode(server_data.charset)
-    # client.send(Ticket_tgs_server_ID_client_auth_bytes)
+    Ticket_tgs_server_ID_client_auth_bytes = Ticket_tgs_server_ID_client_auth.encode(v_server_data.charset)
+    vClient.send(Ticket_tgs_server_ID_client_auth_bytes)
 
+    # encode and send user input, decode messages received
+    run_node.run_node(vClient, v_server_data.charset, client_data.prompt)
+    # close the node
+    vClient.close()
 # end def requestKerberos()
 
 
 # run the client until SENTINEL is given
 if __name__ == '__main__':
-    requestKerberos(CLIENT, AS_TGS_SERVER)
-    # run_node.main_ns(CLIENT, V_SERVER, Client)
-    # configure the logger
-    logging.basicConfig(level=logging.INFO)
-    # create a node
-    logging.info(f'{CONNECTING_STATUS} {V_SERVER_ADDR}:{V_SERVER_PORT} . . .')
-    vClient = Client(V_SERVER_ADDR, V_SERVER_PORT)
-    # encode and send user input, decode messages received
-    run_node.encodeDecode(vClient, V_SERVER_CHARSET, PROMPT)
-    # close the node
-    vClient.close()
+    requestKerberos(CLIENT, AS_TGS_SERVER, V_SERVER)
 # end if __name__ == '__main__'
