@@ -179,4 +179,13 @@ def requestKerberos(client_data, server_data):
 if __name__ == '__main__':
     requestKerberos(CLIENT, AS_TGS_SERVER)
     # run_node.main_ns(CLIENT, V_SERVER, Client)
+    # configure the logger
+    logging.basicConfig(level=logging.INFO)
+    # create a node
+    logging.info(f'{CONNECTING_STATUS} {V_SERVER_ADDR}:{V_SERVER_PORT} . . .')
+    vClient = Client(V_SERVER_ADDR, V_SERVER_PORT)
+    # encode and send user input, decode messages received
+    run_node.encodeDecode(vClient, V_SERVER_CHARSET, PROMPT)
+    # close the node
+    vClient.close()
 # end if __name__ == '__main__'
