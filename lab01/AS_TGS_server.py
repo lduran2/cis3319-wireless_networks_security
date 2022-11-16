@@ -16,7 +16,7 @@ from ticket import TicketValidity, TICKET_EXPIRED
 
 # debug modes
 FAIL_TS2 = False
-FAIL_TS4 = False
+FAIL_TS4 = True
 
 
 # ID for this node
@@ -156,6 +156,10 @@ def requestKerberos(node_data, server_data):
             K_c_v_chars = urandom(DES_KEY_SIZE).decode(KEY_CHARSET)
             # get a time stamp
             TS4 = time.time()
+            # clear if need to fail
+            if (FAIL_TS4):
+                TS4 = 0
+            # end if (FAIL_TS4)
 
             # concatenate the ticket
             plain_Ticket_v = f'{K_c_v_chars}||{ID_c}||{AD_c}||{ID_v}||{TS4}||{Lifetimes[4]}'

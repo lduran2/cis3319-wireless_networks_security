@@ -194,6 +194,21 @@ def requestKerberos(client_data, atgs_data, v_server_data):
     Ticket_tgs_server_ID_client_auth_bytes = Ticket_v_client_auth.encode(v_server_data.charset)
     vClient.send(Ticket_tgs_server_ID_client_auth_bytes)
 
+    # (5'Rx)
+    # initialize empty to start the loop
+    msg_bytes = bytes()
+    # read in from node until bytes are read
+    while (not(msg_bytes)):
+        msg_bytes = vClient.recv()
+
+    # check if expired
+    # decrypt the message
+    msg_chars = DES_c_v.decrypt(msg_bytes)
+    # log the message received
+    logging.info(f'(5Rx) Received: {msg_bytes}')
+    if (TICKET_EXPIRED==msg_chars):
+        return
+
     # encode and send user input, decode messages received
     run_node.run_node(vClient, v_server_data.charset, client_data.prompt)
     # close the node

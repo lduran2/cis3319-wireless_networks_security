@@ -61,7 +61,9 @@ def main(node_data, server_data):
     plain_Ticket_v = DES_v.decrypt(cipher_Ticket_v_byts)
     print()
     # split the ticket
-    K_c_tgs, ID_c, AD_c, ID_v, TS4_str, Lifetime4_str = plain_Ticket_v.split('||')
+    K_c_v, ID_c, AD_c, ID_v, TS4_str, Lifetime4_str = plain_Ticket_v.split('||')
+    # create DES for K_c_v
+    DES_c_v = DES(K_c_v.encode(KEY_CHARSET))
 
     # create a random key for C/TGS
     # (may be used to encrypt the result of validation)
