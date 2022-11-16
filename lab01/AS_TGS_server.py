@@ -226,7 +226,7 @@ def requestKerberos(node_data, server_data):
                 continue
             # end if (now - TS2_1o >= Lifetime2_1o)
             
-            # (4Tx) TGS -> C: E(K_c_v, [K_c_v || ID_v || TS4 || Ticket_v])
+            # (4Tx) TGS -> C:   E(K_c_tgs, [K_c_v || ID_v || TS4 || Ticket_v])
             # create a random key for C/V
             K_c_v_chars = urandom(DES_KEY_SIZE).decode(KEY_CHARSET)
             # get a time stamp
