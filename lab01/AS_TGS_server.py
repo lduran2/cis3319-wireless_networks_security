@@ -4,74 +4,19 @@ import logging
 import time
 from sys import stderr
 from os import urandom
-from enum import Enum
 
 # local library crypto
 import run_node
 from run_node import servers_config_data, nodes_config_data, config
 from crypto import KeyManager, DES
 from node import Node
-from V_server import Server
+from server import Server
+from ticket import TicketValidity, TICKET_EXPIRED
 
 
 # debug modes
 FAIL_TS2 = False
 FAIL_TS4 = False
-
-
-class AG_TGS_Server:
-    '''
-    A simple socket server.
-    '''
-
-    # the maximum number of connections
-    MAX_N_CONNS = 1
-
-    def __init__(self, addr: str, port: int, buffer_size=1024):
-        '''
-        Allocates space for the socket server and initializes it.
-        @param addr: str = address whereat to listen (without port)
-        @param port: int = port of address whereat to listen
-        @param buffer_size: int = default buffer size for receiving
-                messages
-        '''
-        # create and store the node
-        self.node = Node(addr, port, Server.bindListenAccept, buffer_size)
-
-    @staticmethod
-    def bindListenAccept(node: Node):
-        # bind it to the address whereat to listen
-        node.s.bind((node.addr, node.port))
-        # start listening
-        node.s.listen(Server.MAX_N_CONNS)
-        # store the connected socket and update the address
-        node.conn, node.addr = node.s.accept()
-
-    def send(self, msg_bytes: bytes):
-        '''
-        Sends the message given by `msg_bytes` through the socket.
-        @param msg_bytes: bytes = message to send
-        '''
-        # delegate to the node
-        self.node.send(msg_bytes)
-
-    def recv(self, buffer_size=None) -> bytes:
-        '''
-        Receives a message from the socket.
-        @param buffer_size: int? = size of the receiving buffer
-        @return the message received
-        '''
-        # delegate to the node
-        msg_bytes = self.node.recv(buffer_size)
-        # return the message
-        return msg_bytes
-
-    def close(self):
-        '''
-        Closes the backing socket.
-        '''
-        self.node.close()
-# end class Server
 
 
 # ID for this node
@@ -91,27 +36,6 @@ KEY_CHARSET = 'Latin-1'
 
 # the lifetimes of tickets
 Lifetimes = { 2: 60, 4: 86400 } # [s]
-# expired ticket message
-TICKET_EXPIRED = "This ticket has expired."
-
-
-class TicketValidity(Enum):
-    VALID = True
-    NOT_VALID = False
-    
-    def __bool__(self):
-        return self.value
-    
-    @staticmethod
-    def valueOf(_is):
-        return (TicketValidity.VALID if _is else TicketValidity.NOT_VALID)
-
-    @staticmethod
-    def validate(timestamp, lifetime):
-        # get the current time
-        now = time.time()
-        # filter out any expired ticket
-        return TicketValidity.valueOf(now - timestamp < lifetime)
 
 def requestKerberos(node_data, server_data):
     # configure the logger
@@ -211,7 +135,8 @@ def requestKerberos(node_data, server_data):
             print()
             # split the ticket
             K_c_tgs_chars_1o, ID_c_1o, AD_c_1o, ID_tgs_1o, TS2_1o_str, Lifetime2_1o_str = plain_Ticket_tgs_1o.split('||')
-            # convert timestamps
+
+            # parse timestamps
             TS2_1o, Lifetime2_1o = (float(ts.rstrip('\0')) for ts in (TS2_1o_str, Lifetime2_1o_str))
             # validate Ticket_tgs' by its TS2
             Ticket_tgs_1o_validity = TicketValidity.validate(TS2_1o, Lifetime2_1o)

@@ -9,7 +9,8 @@ import run_node
 from run_node import servers_config_data, nodes_config_data, config
 from crypto import KeyManager, DES
 from node import Node
-from AS_TGS_server import ID as ID_tgs, KEY_CHARSET, TICKET_EXPIRED
+from ticket import TicketValidity, TICKET_EXPIRED
+from AS_TGS_server import ID as ID_tgs, KEY_CHARSET
 from V_server import ID as ID_v
 
 
@@ -84,11 +85,8 @@ def requestKerberos(client_data, atgs_data, v_server_data):
     logging.info(f'{client_data.connecting_status} {AD_c} . . .')
     atgsClient = Client(atgs_data.addr, atgs_data.port)
 
-    # read the key for C/AS
-    Kc = KeyManager.read_key(config['kerberos_keys']['Kc_file'])
-    
-    # create DES for Kc
-    DES_c = DES(Kc)
+    # read the key and create DES for C/AS
+    DES_c = DES(KeyManager.read_key(config['kerberos_keys']['Kc_file']))
 
     # (1Tx) C -> AS:  ID_c || ID_tgs || TS1
     # get a time stamp
@@ -193,7 +191,7 @@ def requestKerberos(client_data, atgs_data, v_server_data):
     Ticket_v_client_auth = f'{Ticket_v}||{cipher_Authenticator_c2}'
     # send the client authentication message
     logging.info(f'(5) Sending plain: {Ticket_v_client_auth}')
-    Ticket_tgs_server_ID_client_auth_bytes = Ticket_tgs_server_ID_client_auth.encode(v_server_data.charset)
+    Ticket_tgs_server_ID_client_auth_bytes = Ticket_v_client_auth.encode(v_server_data.charset)
     vClient.send(Ticket_tgs_server_ID_client_auth_bytes)
 
     # encode and send user input, decode messages received

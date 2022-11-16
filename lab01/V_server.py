@@ -1,68 +1,16 @@
 
 # standard libraries
-import json
-import socket
+import logging
+from sys import stderr
+from os import urandom
 
 # local library crypto
 import run_node
-from run_node import servers_config_data, nodes_config_data
-from node import Node
-
-
-class Server:
-    '''
-    A simple socket server.
-    '''
-
-    # the maximum number of connections
-    MAX_N_CONNS = 1
-
-    def __init__(self, addr: str, port: int, buffer_size=1024):
-        '''
-        Allocates space for the socket server and initializes it.
-        @param addr: str = address whereat to listen (without port)
-        @param port: int = port of address whereat to listen
-        @param buffer_size: int = default buffer size for receiving
-                messages
-        '''
-        # create and store the node
-        self.node = Node(addr, port, Server.bindListenAccept, buffer_size)
-
-    @staticmethod
-    def bindListenAccept(node: Node):
-        # bind it to the address whereat to listen
-        node.s.bind((node.addr, node.port))
-        # start listening
-        node.s.listen(Server.MAX_N_CONNS)
-        # store the connected socket and update the address
-        node.conn, node.addr = node.s.accept()
-
-    def send(self, msg_bytes: bytes):
-        '''
-        Sends the message given by `msg_bytes` through the socket.
-        @param msg_bytes: bytes = message to send
-        '''
-        # delegate to the node
-        self.node.send(msg_bytes)
-
-    def recv(self, buffer_size=None) -> bytes:
-        '''
-        Receives a message from the socket.
-        @param buffer_size: int? = size of the receiving buffer
-        @return the message received
-        '''
-        # delegate to the node
-        msg_bytes = self.node.recv(buffer_size)
-        # return the message
-        return msg_bytes
-
-    def close(self):
-        '''
-        Closes the backing socket.
-        '''
-        self.node.close()
-# end class Server
-
+from run_node import servers_config_data, nodes_config_data, config
+from crypto import KeyManager, DES
+from server import Server
+from ticket import TicketValidity, TICKET_EXPIRED
+from AS_TGS_server import KEY_CHARSET, DES_KEY_SIZE
 
 # ID for this node
 ID = "CIS3319SERVERID"
@@ -74,7 +22,78 @@ SERVER = servers_config_data[SECTION]
 # load node data
 NODE = nodes_config_data[SECTION]
 
+
+def main(node_data, server_data):
+    # configure the logger
+    logging.basicConfig(level=logging.INFO)
+    # create a node
+    logging.info(f'{node_data.connecting_status} {server_data.addr}:{server_data.port} . . .')
+    server = Server(server_data.addr, server_data.port)
+
+    # read the key and create DES for TGS/V
+    DES_v = DES(KeyManager.read_key(config['kerberos_keys']['Kv_file']))
+
+    # (5Rx) C -> V: Ticket_v || Authenticator_c
+    # initialize empty to start the loop
+    msg_bytes = bytes()
+    # read in from node until bytes are read
+    while (not(msg_bytes)):
+        msg_bytes = server.recv()
+
+    # decode the message
+    msg_chars = msg_bytes.decode(server_data.charset)
+    # log the message received
+    logging.info(f'(5Rx) Received: {msg_bytes}')
+    # print the decoded message
+    print(file=stderr, flush=True)
+    print('(5Rx) Decoded: ', end='', file=stderr, flush=True)
+    print(msg_chars)
+    # split the message
+    cipher_Ticket_v_chars, Authenticator_c2 = msg_chars.split('||')
+
+    # decrypt the Ticket_v
+    # 1st encode the ticket to the key charset
+    # this includes 0 bytes
+    cipher_Ticket_v_byts_untrim = cipher_Ticket_v_chars.encode(KEY_CHARSET)
+    # trim last 0 bytes
+    cipher_Ticket_v_byts = bytes.rstrip(cipher_Ticket_v_byts_untrim, b'\x00')
+    # decrypt the ticket
+    plain_Ticket_v = DES_v.decrypt(cipher_Ticket_v_byts)
+    print()
+    # split the ticket
+    K_c_tgs, ID_c, AD_c, ID_v, TS4_str, Lifetime4_str = plain_Ticket_v.split('||')
+
+    # create a random key for C/TGS
+    # (may be used to encrypt the result of validation)
+    K_c_v_byts = urandom(DES_KEY_SIZE)
+    K_c_v_chars = K_c_v_byts.decode(KEY_CHARSET)
+    DES_c_v = DES(K_c_v_byts)
+
+    # parse timestamps
+    TS4, Lifetime4 = (float(ts.rstrip('\0')) for ts in (TS4_str, Lifetime4_str))
+    # validate Ticket_v by its TS4
+    Ticket_v_validity = TicketValidity.validate(TS4, Lifetime4)
+    print(f'This ticket is {Ticket_v_validity.name}.')
+    # filter out any expired ticket
+    if (not(Ticket_v_validity)):
+        # encrypt an expiration message
+        cipher_expire = DES_c_v.encrypt(TICKET_EXPIRED)
+        # send expiration message
+        server.send(cipher_expire)
+        # listen for a new message
+        return
+    # end if (now - TS2_1o >= Lifetime2_1o)
+    
+
+
+    # encode and send user input, decode messages received
+    run_node.run_node(server, server_data.charset, node_data.prompt)
+    # close the node
+    server.close()
+# end def main(node_data, server_data)
+
+
 # run the server until SENTINEL is given
 if __name__ == '__main__':
-    run_node.main_ns(NODE, SERVER, Server)
+    main(NODE, SERVER)
 # end if __name__ == '__main__'
