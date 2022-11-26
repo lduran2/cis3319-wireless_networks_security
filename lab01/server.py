@@ -3,7 +3,7 @@
 import socket
 
 # local library crypto
-import node
+import run_node
 from node import Node
 
 
@@ -72,5 +72,5 @@ PROMPT = 'server> '
 
 # run the server until SENTINEL is given
 if __name__ == '__main__':
-    node.main('listening', Server, SERVER_ADDR, SERVER_PORT, SERVER_CHARSET, PROMPT)
+    run_node.main('listening', Server, SERVER_ADDR, SERVER_PORT, SERVER_CHARSET, PROMPT)
 # end if __name__ == '__main__'
