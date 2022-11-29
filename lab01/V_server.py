@@ -34,12 +34,9 @@ def main(node_data, server_data):
     DES_v = DES(KeyManager.read_key(config['kerberos_keys']['Kv_file']))
 
     # (5Rx) C -> V: Ticket_v || Authenticator_c
-    # initialize empty to start the loop
-    msg_bytes = bytes()
-    # read in from node until bytes are read
-    while (not(msg_bytes)):
-        msg_bytes = server.recv()
 
+    # receive the message
+    msg_bytes = run_node.recv_blocking(server)
     # decode the message
     msg_chars = msg_bytes.decode(server_data.charset)
     # log the message received
@@ -49,7 +46,7 @@ def main(node_data, server_data):
     print('(5Rx) Decoded: ', end='', file=stderr, flush=True)
     print(msg_chars)
     # split the message
-    cipher_Ticket_v_chars, Authenticator_c2 = msg_chars.split('||')
+    cipher_Ticket_v_chars, cipher_Authenticator_c2_chars = msg_chars.split('||')
 
     # decrypt the Ticket_v
     # 1st encode the ticket to the key charset
@@ -82,8 +79,23 @@ def main(node_data, server_data):
         return
     # end if (now - TS2_1o >= Lifetime2_1o)
 
+    # decrypt Authenticator_c2
+    # 1st encode Authenticator_c2 to the key charset
+    # this includes 0 bytes
+    cipher_Authenticator_c2_byts_untrim = cipher_Authenticator_c2_chars.encode(KEY_CHARSET)
+    # trim last 0 bytes
+    cipher_Authenticator_c2_byts = bytes.rstrip(cipher_Authenticator_c2_byts_untrim, b'\x00')
+    logging.info(f'(5) Received bytes: {cipher_Authenticator_c2_byts}')
+    # decrypt Authenticator_c2
+    plain_Authenticator_c2 = DES_c_v.decrypt(cipher_Authenticator_c2_byts)
+    print()
+    # split Authenticator_c2
+    ID_c2, AD_c2, TS5_str = plain_Authenticator_c2.split('||')
+    # parse the timestamp TS5
+    TS5 = float(TS5_str.rstrip('\0'))
+
     # send a message for successful authentication
-    plain_success = 'Successfully authenticated by Kerberos.'
+    plain_success = f'{TS5 + 1}'
     cipher_success = DES_c_v.encrypt(plain_success)
     server.send(cipher_success)
 

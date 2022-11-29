@@ -229,10 +229,12 @@ def request_service(client, v_charset, Ticket_v, DES_c_v, AD_c):
     plain_Authenticator_c = f'{ID}||{AD_c}||{TS5}'
     # encrypt the authenticator
     logging.info(f'(5) Encrypting plain: {plain_Authenticator_c}')
-    cipher_Authenticator_c = DES_c_v.encrypt(plain_Authenticator_c)
+    cipher_Authenticator_c_byts = DES_c_v.encrypt(plain_Authenticator_c)
+    # convert to string
+    cipher_Authenticator_c_str = cipher_Authenticator_c_byts.decode(KEY_CHARSET)
 
     # concatenate the message
-    Ticket_v_client_auth = f'{Ticket_v}||{cipher_Authenticator_c}'
+    Ticket_v_client_auth = f'{Ticket_v}||{cipher_Authenticator_c_str}'
     # send the client authentication message
     logging.info(f'(5) Sending plain: {Ticket_v_client_auth}')
     Ticket_tgs_server_ID_client_auth_bytes = Ticket_v_client_auth.encode(v_charset)
