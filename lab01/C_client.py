@@ -107,7 +107,7 @@ def requestKerberos(client_data, atgs_data, v_server_data):
     # client/server authentication exchange to obtain service
     request_service(vClient, v_server_data.charset, Ticket_v, DES_c_tgs, AD_c)
     service = receive_from_ticket(vClient, DES_c_v, ID_v)
-    if (not(sgt)):
+    if (not(service)):
         return
     print(file=stderr)
     print(service)
