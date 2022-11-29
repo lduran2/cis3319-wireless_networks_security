@@ -16,7 +16,7 @@ from ticket import TicketValidity, TICKET_EXPIRED
 
 # debug modes
 FAIL_TS2 = False
-FAIL_TS4 = True
+FAIL_TS4 = False
 
 
 # ID for this node
@@ -173,9 +173,12 @@ def requestKerberos(node_data, server_data):
             # encrypt the message
             logging.info(f'(4) Sending plain: {plain_shared_key_ticket}')
             cipher_shared_key_ticket = DES_c_tgs.encrypt(plain_shared_key_ticket)
+            logging.info(f'(4) Sending cipher: {cipher_shared_key_ticket}')
             # send it
             server.send(cipher_shared_key_ticket)
 
+            print(file=stderr)
+            logging.info(f'finished authenticating: {ID_c}')
         # end while True
     finally:
         # close the node

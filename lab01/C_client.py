@@ -153,6 +153,7 @@ def requestKerberos(client_data, atgs_data, v_server_data):
     # log the message received
     logging.info(f'(4Rx) Received: {msg_bytes}')
     if (TICKET_EXPIRED==msg_chars):
+        print(f'For TGS_server, {msg_chars}')
         return
 
     # (4Rx) TGS -> C:   E(K_c_tgs, [K_c_v || ID_v || TS4 || Ticket_v])
@@ -203,11 +204,16 @@ def requestKerberos(client_data, atgs_data, v_server_data):
 
     # check if expired
     # decrypt the message
+    logging.info(f'(5\'Rx) Received cipher: {msg_bytes}')
     msg_chars = DES_c_v.decrypt(msg_bytes)
     # log the message received
-    logging.info(f'(5Rx) Received: {msg_bytes}')
+    logging.info(f'(5\'Rx) Received plain: {msg_bytes}')
+    print(file=stderr)
     if (TICKET_EXPIRED==msg_chars):
+        print(f'For V_server, {msg_chars}')
         return
+    print(file=stderr)
+    print(msg_chars)
 
     # encode and send user input, decode messages received
     run_node.run_node(vClient, v_server_data.charset, client_data.prompt)

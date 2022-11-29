@@ -59,7 +59,7 @@ def receiveThread(node, des, decode, prompt):
                 # log success
                 print(file=stderr)
                 print(file=stderr)
-                logging.info("Authentication successful!")
+                logging.info("MAC authentication successful!")
                 # log the message received
                 logging.info(f'Received: {msg_bytes}')
                 # print the decrypted message

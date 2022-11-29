@@ -63,13 +63,8 @@ def main(node_data, server_data):
     # split the ticket
     K_c_v, ID_c, AD_c, ID_v, TS4_str, Lifetime4_str = plain_Ticket_v.split('||')
     # create DES for K_c_v
-    DES_c_v = DES(K_c_v.encode(KEY_CHARSET))
-
-    # create a random key for C/TGS
     # (may be used to encrypt the result of validation)
-    K_c_v_byts = urandom(DES_KEY_SIZE)
-    K_c_v_chars = K_c_v_byts.decode(KEY_CHARSET)
-    DES_c_v = DES(K_c_v_byts)
+    DES_c_v = DES(K_c_v.encode(KEY_CHARSET))
 
     # parse timestamps
     TS4, Lifetime4 = (float(ts.rstrip('\0')) for ts in (TS4_str, Lifetime4_str))
@@ -80,13 +75,19 @@ def main(node_data, server_data):
     if (not(Ticket_v_validity)):
         # encrypt an expiration message
         cipher_expire = DES_c_v.encrypt(TICKET_EXPIRED)
+        logging.info(f'(5Rx) Sending cipher: {cipher_expire}')
         # send expiration message
         server.send(cipher_expire)
         # listen for a new message
         return
     # end if (now - TS2_1o >= Lifetime2_1o)
-    
 
+    # send a message for successful authentication
+    plain_success = 'Successfully authenticated by Kerberos.'
+    cipher_success = DES_c_v.encrypt(plain_success)
+    server.send(cipher_success)
+
+    print(file=stderr)
 
     # encode and send user input, decode messages received
     run_node.run_node(server, server_data.charset, node_data.prompt)
