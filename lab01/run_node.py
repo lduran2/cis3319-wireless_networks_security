@@ -7,7 +7,7 @@ from _thread import start_new_thread
 
 
 # local library crypto
-from crypto import KeyManager, DES, CharacterEncoder, bit2hex
+from crypto import KeyManager, DES, CharacterEncoder, EncryptEncoder, bit2hex
 from node import Node
 
 # name of file containing the key
@@ -15,7 +15,7 @@ KEY_FILE = 'key.txt'
 # ends the input stream
 SENTINEL = 'exit'
 
-def receiveThread(node, des, decode, prompt):
+def receiveThread(node, decode, prompt):
     old_tb = None
     while True:
         try:
@@ -27,7 +27,7 @@ def receiveThread(node, des, decode, prompt):
             # ignore any illegal bytes
             msg_bytes = bytes(b for b in msg_bytes if b in range(256))
             # decrypt the message
-            dec_string = des.decrypt(msg_bytes, decode=decode)
+            dec_string = decode(msg_bytes)
             # log the message received
             print(file=stderr)
             print(file=stderr)
@@ -47,7 +47,7 @@ def receiveThread(node, des, decode, prompt):
             old_tb = tb
             continue
     # end while True
-# end def receiveThread(node, des, charset)
+# end def receiveThread(node, decode, prompt)
 
 # run the node until SENTINEL is given
 def main(connecting_status: str, node_init: 'Callable[[addr, port], Node]', addr: str, port: int, charset: str, prompt: str):
@@ -83,11 +83,13 @@ def run_node(node: Node, charset: str, prompt: str):
     # create the encoder
     # use the given charset
     charEncoder = CharacterEncoder(charset)
-    # fetch decode
-    decode = charEncoder.decode
+    # create the DES encrypt encoder
+    desEncoder = EncryptEncoder(charEncoder, des)
+    # get decode function
+    decode = desEncoder.decode
 
     # start the receiving thread
-    start_new_thread(receiveThread, (node, des, decode, prompt))
+    start_new_thread(receiveThread, (node, decode, prompt))
 
     while True:
         # TODO: your code here
@@ -99,7 +101,7 @@ def run_node(node: Node, charset: str, prompt: str):
         
         # TODO: your code here
         # encryption
-        cyp_bytes = des.encrypt(msg_string, encode=charEncoder.encode)
+        cyp_bytes = desEncoder.encode(msg_string)
         # send the message
         logging.info(f'Sending cypher: {cyp_bytes}')
         node.send(cyp_bytes)

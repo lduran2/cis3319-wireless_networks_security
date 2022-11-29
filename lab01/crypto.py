@@ -149,6 +149,41 @@ def combine(n: int, m: int, leftBlockN: 'list[int]', rightBlockN: 'list[int]') -
     return (leftBlockN[:n] + rightBlockN[:n])[:m]
 # end def combine(n: int, m: int, leftKeyN: 'list[list[int]]', rightKeyN: 'list[list[int]]')
 
+class EncryptEncoder:
+    '''
+    Encoder adapter that performs encrypt on encode and decrypt on
+    decode.
+    '''
+    def __init__(self, _parent: object, _encrypter: object):
+        '''
+        Initializes an encypt encoder.
+        @param _parent: object = backing encoder with encode and decode
+            methods
+        @param _encrypter: object = backing encrypter with encrypt and
+            decrypt methods
+        '''
+        self.parent = _parent
+        self.encrypter = _encrypter
+
+    def encode(self, string: str) -> bytes:
+        '''
+        Encodes the given string, using the backing encoder, then
+        encrypts it, returning the resulting byte array.
+        @param string: str = to encrypt
+        @return byte array encrypted from the string
+        '''
+        return self.encrypter.encrypt(string, self.parent.encode)
+
+    def decode(self, byts: bytes) -> str:
+        '''
+        Decrypts the given byte array, then decodes it, using the
+        backing encoder, returning the resulting string.
+        @param byts: bytes = to decrypt
+        @return string decrypted from the byte array
+        '''
+        return self.encrypter.decrypt(byts, self.parent.decode)
+# end class CharacterEncoder
+
 class CharacterEncoder:
     '''
     Class used to convert between strings and bytes.
