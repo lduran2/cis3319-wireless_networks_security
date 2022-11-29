@@ -156,3 +156,13 @@ def run_node(node: Node, charset: str, prompt: str):
         node.send(cyp_bytes)
     # end while True
 # end run_node(node: Node, charset: str, prompt: str)
+
+
+def recv_blocking(node: Node) -> bytes:
+    # initialize empty to start the loop
+    msg_bytes = bytes()
+    # read in from node until bytes are read
+    while (not(msg_bytes)):
+        msg_bytes = node.recv()
+    return msg_bytes
+# end def recv_blocking(node: Node) -> bytes

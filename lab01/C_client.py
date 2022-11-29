@@ -85,9 +85,41 @@ def requestKerberos(client_data, atgs_data, v_server_data):
     logging.info(f'{client_data.connecting_status} {AD_c} . . .')
     atgsClient = Client(atgs_data.addr, atgs_data.port)
 
-    # read the key and create DES for C/AS
-    DES_c = DES(KeyManager.read_key(config['kerberos_keys']['Kc_file']))
+    # authentication service exchange to obtain ticket granting-ticket
+    request_ticket_granting_ticket(atgsClient, atgs_data.charset)
+    DES_c_tgs, Ticket_tgs = receive_ticket_granting_ticket(atgsClient)
 
+    # ticket-granting service exchange to obtain service-granting ticket
+    request_service_granting_ticket(atgsClient, atgs_data.charset, Ticket_tgs, DES_c_tgs, AD_c)
+    sgt = receive_from_ticket(atgsClient, DES_c_tgs, ID_tgs)
+    if (not(sgt)):
+        return
+    DES_c_v, Ticket_v = parse_service_granting_ticket(sgt)
+
+    # end connection with AS/TGS
+    atgsClient.close()
+
+    # create the chat client
+    print(file=stderr)
+    logging.info(f'{client_data.connecting_status} {v_server_data.addr}:{v_server_data.port} . . .')
+    vClient = Client(v_server_data.addr, v_server_data.port)
+
+    # client/server authentication exchange to obtain service
+    request_service(vClient, v_server_data.charset, Ticket_v, DES_c_tgs, AD_c)
+    service = receive_from_ticket(vClient, DES_c_v, ID_v)
+    if (not(sgt)):
+        return
+    print(file=stderr)
+    print(service)
+
+    # encode and send user input, decode messages received
+    run_node.run_node(vClient, v_server_data.charset, client_data.prompt)
+    # close the chat client
+    vClient.close()
+# end def requestKerberos()
+
+
+def request_ticket_granting_ticket(client, atgs_charset):
     # (1Tx) C -> AS:  ID_c || ID_tgs || TS1
     # get a time stamp
     TS1 = time.time()
@@ -95,16 +127,19 @@ def requestKerberos(client_data, atgs_data, v_server_data):
     client_auth = f'{ID}||{ID_tgs}||{TS1}'
     # send the client authentication message
     logging.info(f'(1) Sending plain: [{client_auth}]')
-    client_auth_bytes = client_auth.encode(atgs_data.charset)
-    atgsClient.send(client_auth_bytes)
+    client_auth_bytes = client_auth.encode(atgs_charset)
+    client.send(client_auth_bytes)
+# end def request_ticket_granting_ticket(client, atgs_charset)
+
+
+def receive_ticket_granting_ticket(client):
+    # read the key and create DES for C/AS
+    DES_c = DES(KeyManager.read_key(config['kerberos_keys']['Kc_file']))
 
     # (2Rx) AS -> C:    E(Kc, [K_c_tgs || ID_tgs || TS2 || Lifetime2 || Ticket_tgs])
-    # initialize empty to start the loop
-    msg_bytes = bytes()
-    # read in from node until bytes are read
-    while (not(msg_bytes)):
-        msg_bytes = atgsClient.recv()
 
+    # receive the message
+    msg_bytes = run_node.recv_blocking(client)
     # decrypt the message
     msg_chars = DES_c.decrypt(msg_bytes)
     # log the message received
@@ -115,111 +150,94 @@ def requestKerberos(client_data, atgs_data, v_server_data):
     print(msg_chars)
     print(']', file=stderr, flush=True)
     # split the message
-    K_c_tgs, ID_tgs_1o, TS2, Lifetime2, Ticket_tgs = msg_chars.split('||')
+    K_c_tgs, ID_tgs, TS2, Lifetime2, Ticket_tgs = msg_chars.split('||')
     # print the ticket
     print('Ticket_tgs: "', end='', file=stderr, flush=True)
     print(Ticket_tgs)
     print('"', file=stderr, flush=True)
     # create DES for K_c_tgs
     DES_c_tgs = DES(K_c_tgs.encode(KEY_CHARSET))
-    
+    return (DES_c_tgs, Ticket_tgs)
+# end def receive_ticket_granting_ticket(client)
+
+
+def request_service_granting_ticket(client, atgs_charset, Ticket_tgs, DES_c_tgs, AD_c):
     # (3Tx) C -> TGS: ID_v || Ticket_tgs || Authenticator_c
     # get a time stamp
     TS3 = time.time()
 
     # create the authenticator
-    plain_Authenticator_c1 = f'{ID}||{AD_c}||{TS3}'
+    plain_Authenticator_c = f'{ID}||{AD_c}||{TS3}'
     # encrypt the authenticator
-    logging.info(f'(3) Encrypting plain: {plain_Authenticator_c1}')
-    cipher_Authenticator_c1 = DES_c_tgs.encrypt(plain_Authenticator_c1)
+    logging.info(f'(3) Encrypting plain: {plain_Authenticator_c}')
+    cipher_Authenticator_c = DES_c_tgs.encrypt(plain_Authenticator_c)
 
     # concatenate the message
-    Ticket_tgs_server_ID_client_auth = f'{ID_v}||{Ticket_tgs}||{cipher_Authenticator_c1}'
+    Ticket_tgs_server_ID_client_auth = f'{ID_v}||{Ticket_tgs}||{cipher_Authenticator_c}'
     # send the client authentication message
     logging.info(f'(3) Sending plain: {Ticket_tgs_server_ID_client_auth}')
-    Ticket_tgs_server_ID_client_auth_bytes = Ticket_tgs_server_ID_client_auth.encode(atgs_data.charset)
-    atgsClient.send(Ticket_tgs_server_ID_client_auth_bytes)
+    Ticket_tgs_server_ID_client_auth_bytes = Ticket_tgs_server_ID_client_auth.encode(atgs_charset)
+    client.send(Ticket_tgs_server_ID_client_auth_bytes)
+# end def request_service_granting_ticket(client, atgs_charset, Ticket_tgs, DES_c_tgs, AD_c)
 
+
+def receive_from_ticket(client, des, prompt):
     # (3'Rx)
-    # initialize empty to start the loop
-    msg_bytes = bytes()
-    # read in from node until bytes are read
-    while (not(msg_bytes)):
-        msg_bytes = atgsClient.recv()
 
+    # receive the message
+    msg_bytes = run_node.recv_blocking(client)
     # check if expired
     # decrypt the message
-    msg_chars = DES_c_tgs.decrypt(msg_bytes)
+    msg_chars = des.decrypt(msg_bytes)
     # log the message received
     logging.info(f'(4Rx) Received: {msg_bytes}')
     if (TICKET_EXPIRED==msg_chars):
-        print(f'For TGS_server, {msg_chars}')
-        return
+        print(f'from {prompt} {msg_chars}')
+        print(file=stderr)
+        return False
 
+    # return the message if ticket is valid
+    return msg_chars
+# end def receive_from_ticket(client, des)
+
+
+def parse_service_granting_ticket(sgt):
     # (4Rx) TGS -> C:   E(K_c_tgs, [K_c_v || ID_v || TS4 || Ticket_v])
     # print the decoded message
     print(file=stderr, flush=True)
     print('Decrypted: [', end='', file=stderr, flush=True)
-    print(msg_chars)
+    print(sgt)
     print(']', file=stderr, flush=True)
     # split the message
-    K_c_v, ID_v_1o, TS4, Lifetime4, Ticket_v = msg_chars.split('||')
+    K_c_v, ID_v_1o, TS4, Lifetime4, Ticket_v = sgt.split('||')
     # print the ticket
     print('Ticket_v: "', end='', file=stderr, flush=True)
     print(Ticket_v)
     print('"', file=stderr, flush=True)
     # create DES for K_c_v
     DES_c_v = DES(K_c_v.encode(KEY_CHARSET))
+    return (DES_c_v, Ticket_v)
+# end def parse_service_granting_ticket(sgt)
 
+
+def request_service(client, v_charset, Ticket_v, DES_c_tgs, AD_c):
     # (5Tx) C -> V: Ticket_v || Authenticator_c
     # get a time stamp
     TS5 = time.time()
 
     # create the authenticator
-    plain_Authenticator_c2 = f'{ID}||{AD_c}||{TS5}'
+    plain_Authenticator_c = f'{ID}||{AD_c}||{TS5}'
     # encrypt the authenticator
-    logging.info(f'(5) Encrypting plain: {plain_Authenticator_c2}')
-    cipher_Authenticator_c2 = DES_c_tgs.encrypt(plain_Authenticator_c2)
-
-    # end connection with AS/TGS
-    atgsClient.close()
-
-    # create the chat client
-    logging.info(f'{client_data.connecting_status} {v_server_data.addr}:{v_server_data.port} . . .')
-    vClient = Client(v_server_data.addr, v_server_data.port)
+    logging.info(f'(5) Encrypting plain: {plain_Authenticator_c}')
+    cipher_Authenticator_c = DES_c_tgs.encrypt(plain_Authenticator_c)
 
     # concatenate the message
-    Ticket_v_client_auth = f'{Ticket_v}||{cipher_Authenticator_c2}'
+    Ticket_v_client_auth = f'{Ticket_v}||{cipher_Authenticator_c}'
     # send the client authentication message
     logging.info(f'(5) Sending plain: {Ticket_v_client_auth}')
-    Ticket_tgs_server_ID_client_auth_bytes = Ticket_v_client_auth.encode(v_server_data.charset)
-    vClient.send(Ticket_tgs_server_ID_client_auth_bytes)
-
-    # (5'Rx)
-    # initialize empty to start the loop
-    msg_bytes = bytes()
-    # read in from node until bytes are read
-    while (not(msg_bytes)):
-        msg_bytes = vClient.recv()
-
-    # check if expired
-    # decrypt the message
-    logging.info(f'(5\'Rx) Received cipher: {msg_bytes}')
-    msg_chars = DES_c_v.decrypt(msg_bytes)
-    # log the message received
-    logging.info(f'(5\'Rx) Received plain: {msg_bytes}')
-    print(file=stderr)
-    if (TICKET_EXPIRED==msg_chars):
-        print(f'For V_server, {msg_chars}')
-        return
-    print(file=stderr)
-    print(msg_chars)
-
-    # encode and send user input, decode messages received
-    run_node.run_node(vClient, v_server_data.charset, client_data.prompt)
-    # close the node
-    vClient.close()
-# end def requestKerberos()
+    Ticket_tgs_server_ID_client_auth_bytes = Ticket_v_client_auth.encode(v_charset)
+    client.send(Ticket_tgs_server_ID_client_auth_bytes)
+# end def request_service(client, v_charset, Ticket_v, DES_c_tgs, AD_c)
 
 
 # run the client until SENTINEL is given
