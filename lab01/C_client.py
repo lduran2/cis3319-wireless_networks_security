@@ -85,11 +85,11 @@ def requestKerberos(client_data, atgs_data, v_server_data):
     logging.info(f'{client_data.connecting_status} {AD_c} . . .')
     atgsClient = Client(atgs_data.addr, atgs_data.port)
 
-    # authentication service exchange to obtain ticket granting-ticket
+    # (a) authentication service exchange to obtain ticket granting-ticket
     request_ticket_granting_ticket(atgsClient, atgs_data.charset)
     DES_c_tgs, Ticket_tgs = receive_ticket_granting_ticket(atgsClient)
 
-    # ticket-granting service exchange to obtain service-granting ticket
+    # (b) ticket-granting service exchange to obtain service-granting ticket
     request_service_granting_ticket(atgsClient, atgs_data.charset, Ticket_tgs, DES_c_tgs, AD_c)
     sgt = receive_from_ticket(atgsClient, DES_c_tgs, ID_tgs)
     if (not(sgt)):
@@ -104,8 +104,8 @@ def requestKerberos(client_data, atgs_data, v_server_data):
     logging.info(f'{client_data.connecting_status} {v_server_data.addr}:{v_server_data.port} . . .')
     vClient = Client(v_server_data.addr, v_server_data.port)
 
-    # client/server authentication exchange to obtain service
-    request_service(vClient, v_server_data.charset, Ticket_v, DES_c_tgs, AD_c)
+    # (c) client/server authentication exchange to obtain service
+    request_service(vClient, v_server_data.charset, Ticket_v, DES_c_v, AD_c)
     service = receive_from_ticket(vClient, DES_c_v, ID_v)
     if (not(service)):
         return
@@ -220,7 +220,7 @@ def parse_service_granting_ticket(sgt):
 # end def parse_service_granting_ticket(sgt)
 
 
-def request_service(client, v_charset, Ticket_v, DES_c_tgs, AD_c):
+def request_service(client, v_charset, Ticket_v, DES_c_v, AD_c):
     # (5Tx) C -> V: Ticket_v || Authenticator_c
     # get a time stamp
     TS5 = time.time()
@@ -229,7 +229,7 @@ def request_service(client, v_charset, Ticket_v, DES_c_tgs, AD_c):
     plain_Authenticator_c = f'{ID}||{AD_c}||{TS5}'
     # encrypt the authenticator
     logging.info(f'(5) Encrypting plain: {plain_Authenticator_c}')
-    cipher_Authenticator_c = DES_c_tgs.encrypt(plain_Authenticator_c)
+    cipher_Authenticator_c = DES_c_v.encrypt(plain_Authenticator_c)
 
     # concatenate the message
     Ticket_v_client_auth = f'{Ticket_v}||{cipher_Authenticator_c}'
@@ -237,7 +237,7 @@ def request_service(client, v_charset, Ticket_v, DES_c_tgs, AD_c):
     logging.info(f'(5) Sending plain: {Ticket_v_client_auth}')
     Ticket_tgs_server_ID_client_auth_bytes = Ticket_v_client_auth.encode(v_charset)
     client.send(Ticket_tgs_server_ID_client_auth_bytes)
-# end def request_service(client, v_charset, Ticket_v, DES_c_tgs, AD_c)
+# end def request_service(client, v_charset, Ticket_v, DES_c_v, AD_c)
 
 
 # run the client until SENTINEL is given

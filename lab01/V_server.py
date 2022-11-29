@@ -96,6 +96,15 @@ def main(node_data, server_data):
 # end def main(node_data, server_data)
 
 
+def send_service(server, DES_c_v, TS5):
+    # send a message for successful authentication
+    cipher_success = DES_c_v.encrypt(str(TS5 + 1))
+    server.send(cipher_success)
+
+    print(file=stderr)
+# end def send_service(server, DES_c_v, TS5)
+
+
 # run the server until SENTINEL is given
 if __name__ == '__main__':
     main(NODE, SERVER)
