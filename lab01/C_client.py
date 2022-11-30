@@ -6,11 +6,11 @@ from sys import stderr
 
 # local library crypto
 import run_node
-from run_node import servers_config_data, nodes_config_data, config
+from run_node import servers_config_data, nodes_config_data, config, KEY_CHARSET
 from crypto import KeyManager, DES
 from node import Node
-from ticket import TicketValidity, TICKET_EXPIRED
-from AS_TGS_server import ID as ID_tgs, KEY_CHARSET
+from ticket import TICKET_EXPIRED
+from AS_TGS_server import ID as ID_tgs
 from V_server import ID as ID_v
 
 
@@ -151,7 +151,7 @@ def receive_ticket_granting_ticket(client):
 # end def receive_ticket_granting_ticket(client)
 
 
-def request_with_authenticator(client, charset, next_destination_ID, Ticket, des_shared_c, AD_c):
+def request_with_authenticator(client, charset, next_server_ID, Ticket, des_shared_c, AD_c):
     # (3Tx) C -> TGS: ID_v || Ticket_tgs || Authenticator_c
     # (5Tx) C -> V: Ticket_v || Authenticator_c
     # get a time stamp
@@ -165,13 +165,13 @@ def request_with_authenticator(client, charset, next_destination_ID, Ticket, des
     cipher_Authenticator_c_str = cipher_Authenticator_c_byts.decode(KEY_CHARSET)
 
     # add separator on next destination, if there is one
-    next_dest_sep = f'{next_destination_ID}||' if (next_destination_ID) else ''
+    next_dest_sep = f'{next_server_ID}||' if (next_server_ID) else ''
     # concatenate the message
     Ticket_client_auth = f'{next_dest_sep}{Ticket}||{cipher_Authenticator_c_str}'
     # send the client authentication message
     Ticket_client_auth_bytes = Ticket_client_auth.encode(charset)
     client.send(Ticket_client_auth_bytes)
-# end request_with_authenticator(client, charset, next_destination_ID, Ticket, des_shared_c, AD_c)
+# end request_with_authenticator(client, charset, next_server_ID, Ticket, des_shared_c, AD_c)
 
 
 def receive_from_ticket(client, des_shared_c, prompt):

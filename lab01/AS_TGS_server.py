@@ -7,11 +7,11 @@ from os import urandom
 
 # local library crypto
 import run_node
-from run_node import servers_config_data, nodes_config_data, config
+from run_node import servers_config_data, nodes_config_data, config, KEY_CHARSET
 from crypto import KeyManager, DES
 from node import Node
 from server import Server
-from ticket import TicketValidity, TICKET_EXPIRED
+from ticket import receive_ticket
 
 
 # debug modes
@@ -31,8 +31,6 @@ NODE = nodes_config_data[SECTION]
 
 # size for DES keys
 DES_KEY_SIZE = 8
-# Python uses Latin-1 for Pickles, so it's good enough to encode keys
-KEY_CHARSET = 'Latin-1'
 
 # the lifetimes of tickets
 Lifetimes = { 2: 60, 4: 86400 } # [s]
@@ -73,11 +71,12 @@ def serve_authentication(server, charset, DES_c, DES_tgs, AD_c):
 def serve_ticket_granting(server, charset, DES_tgs, DES_v, AD_c):
     # (b) ticket-granting service exchange to obtain service-granting ticket
     # check for service-granting ticket request with valid ticket
-    sgt_request = receive_service_granting_ticket_request(server, charset, DES_tgs)
+    sgt_request = receive_ticket(server, charset, DES_tgs)
     if (not(sgt_request)):
         return
     # split the service-granting ticket request
-    ID_v, DES_c_tgs, ID_c = sgt_request
+    # Authenticator_c is not needed
+    ID_v, _, DES_c_tgs, ID_c = sgt_request
     # send the service-granting ticket
     send_service_granting_ticket(server, DES_c_tgs, DES_v, ID_c, AD_c, ID_v)
 # end def serve_ticket_granting(server, charset, DES_tgs, DES_v, AD_c)
@@ -160,10 +159,11 @@ def send_service_granting_ticket(server, DES_c_tgs, DES_v, ID_c, AD_c, ID_v):
 # end def send_service_granting_ticket(server, DES_c_tgs, DES_v, ID_c, AD_c, ID_v)
 
 
-def create_ticket(server, des_destination, ID_c, AD_c, server_ID, fail_timestamp, Lifetime):
+def create_ticket(server, des_next_server, ID_c, AD_c, server_ID, fail_timestamp, Lifetime):
+    # Ticket = E(K_next_dest
     # create a random key
-    K_to_share_byts = urandom(DES_KEY_SIZE)
-    K_to_share_chars = K_to_share_byts.decode(KEY_CHARSET)
+    K_c_next_server_byts = urandom(DES_KEY_SIZE)
+    K_c_next_server_chars = K_c_next_server_byts.decode(KEY_CHARSET)
     # get a time stamp
     TS = time.time()
     # clear if need to fail
@@ -172,13 +172,13 @@ def create_ticket(server, des_destination, ID_c, AD_c, server_ID, fail_timestamp
     # end if (fail_timestamp)
 
     # concatenate the ticket
-    plain_Ticket = f'{K_to_share_chars}||{ID_c}||{AD_c}||{server_ID}||{TS}||{Lifetime}'
+    plain_Ticket = f'{K_c_next_server_chars}||{ID_c}||{AD_c}||{server_ID}||{TS}||{Lifetime}'
     # encrypt the ticket
-    cipher_Ticket_byts = des_destination.encrypt(plain_Ticket)
+    cipher_Ticket_byts = des_next_server.encrypt(plain_Ticket)
     cipher_Ticket_chars = cipher_Ticket_byts.decode(KEY_CHARSET)
 
-    return (K_to_share_chars, TS, cipher_Ticket_chars)
-# end def create_ticket(server, des_destination, ID_c, AD_c, server_ID, fail_timestamp, Lifetime)
+    return (K_c_next_server_chars, TS, cipher_Ticket_chars)
+# end def create_ticket(server, des_next_server, ID_c, AD_c, server_ID, fail_timestamp, Lifetime)
 
 
 # run the server until SENTINEL is given

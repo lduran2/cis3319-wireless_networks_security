@@ -6,11 +6,11 @@ from os import urandom
 
 # local library crypto
 import run_node
-from run_node import servers_config_data, nodes_config_data, config
+from run_node import servers_config_data, nodes_config_data, config, KEY_CHARSET
 from crypto import KeyManager, DES
 from server import Server
-from ticket import TicketValidity, TICKET_EXPIRED
-from AS_TGS_server import KEY_CHARSET, DES_KEY_SIZE
+from ticket import receive_ticket
+from AS_TGS_server import DES_KEY_SIZE
 
 # ID for this node
 ID = "CIS3319SERVERID"
@@ -35,11 +35,12 @@ def main(node_data, server_data):
 
     # (c) client/server authentication exchange to obtain service
     # check for service-granting ticket request with valid ticket
-    service_request = receive_service_request(server, server_data.charset, DES_v)
+    service_request = receive_ticket(server, server_data.charset, DES_v)
     if (not(service_request)):
         return
     # split the service request
-    Authenticator_c, DES_c_v = service_request
+    # there is no next server.  no need for ID_c
+    _, Authenticator_c, DES_c_v, _ = service_request
     # get the timestamp and send it to client for authentication
     TS5 = parse_authenticator(DES_c_v, Authenticator_c)
     send_service(server, DES_c_v, TS5)
@@ -104,7 +105,6 @@ def parse_authenticator(DES_c_v, Authenticator_c):
     cipher_Authenticator_c_byts = bytes.rstrip(cipher_Authenticator_c_byts_untrim, b'\x00')
     # decrypt Authenticator_c
     plain_Authenticator_c = DES_c_v.decrypt(cipher_Authenticator_c_byts)
-    logging.info(plain_Authenticator_c)
     # split Authenticator_c
     ID_c, AD_c, TS5_str = plain_Authenticator_c.split('||')
     # parse the timestamp TS5

@@ -42,6 +42,10 @@ ENC_FILE, MAC_FILE = (
 # load string that ends the input stream
 SENTINEL = config['node']['sentinel']
 
+# Python uses Latin-1 for Pickles, so it's good enough to encode keys
+KEY_CHARSET = 'Latin-1'
+
+
 def receiveThread(node, des, decode, prompt):
     old_tb = None
     while True:
