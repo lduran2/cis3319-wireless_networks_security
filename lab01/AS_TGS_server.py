@@ -58,7 +58,7 @@ def requestKerberos(node_data, server_data):
             ID_c = receive_ticket_granting_ticket_request(server, server_data.charset)
             DES_c_tgs = send_ticket_granting_ticket(server, DES_c, DES_tgs, ID_c, AD_c)
 
-            server_ticket_granting(server, server_data.charset, DES_tgs, DES_c_tgs, DES_v, AD_c)
+            server_ticket_granting(server, server_data.charset, DES_tgs, DES_v, AD_c)
         # end while True
     finally:
         # close the node
@@ -66,17 +66,17 @@ def requestKerberos(node_data, server_data):
 # end def requestKerberos(node_data, server_data)
 
 
-def server_ticket_granting(server, charset, DES_tgs, DES_c_tgs, DES_v, AD_c):
+def server_ticket_granting(server, charset, DES_tgs, DES_v, AD_c):
     # (b) ticket-granting service exchange to obtain service-granting ticket
     # check for service-granting ticket request with valid ticket
-    sgt_request = receive_service_granting_ticket_request(server, charset, DES_tgs, DES_c_tgs)
+    sgt_request = receive_service_granting_ticket_request(server, charset, DES_tgs)
     if (not(sgt_request)):
         return
     # split the service-granting ticket request
     ID_v, DES_c_tgs, ID_c = sgt_request
     # send the service-granting ticket
     send_service_granting_ticket(server, DES_c_tgs, DES_v, ID_c, AD_c, ID_v)
-# end def server_ticket_granting(server, charset, DES_tgs, DES_c_tgs, DES_v, AD_c)
+# end def server_ticket_granting(server, charset, DES_tgs, DES_v, AD_c)
 
 
 def receive_ticket_granting_ticket_request(server, charset):
@@ -129,7 +129,7 @@ def send_ticket_granting_ticket(server, DES_c, DES_tgs, ID_c, AD_c):
 # end def send_ticket_granting_ticket(server, ID_c, AD_c)
 
 
-def receive_service_granting_ticket_request(server, charset, DES_tgs, DES_c_tgs):
+def receive_service_granting_ticket_request(server, charset, DES_tgs):
     # (3Rx) C -> TGS: ID_v || Ticket_tgs || Authenticator_c
 
     # receive the message
@@ -160,7 +160,9 @@ def receive_service_granting_ticket_request(server, charset, DES_tgs, DES_c_tgs)
     logging.info(f'decrypted: "{plain_Ticket_tgs}"')
     print()
     # split the ticket
-    K_c_tgs_chars, ID_c, AD_c, ID_tgs, TS2_str, Lifetime2_str = plain_Ticket_tgs.split('||')
+    K_c_tgs, ID_c, AD_c, ID_tgs, TS2_str, Lifetime2_str = plain_Ticket_tgs.split('||')
+    # create DES for K_c_tgs
+    DES_c_tgs = DES(K_c_tgs.encode(KEY_CHARSET))
 
     # parse timestamps
     TS2, Lifetime2 = (float(ts.rstrip('\0')) for ts in (TS2_str, Lifetime2_str))
@@ -178,7 +180,7 @@ def receive_service_granting_ticket_request(server, charset, DES_tgs, DES_c_tgs)
     # end if (now - TS2 >= Lifetime2)
 
     return (ID_v, DES_c_tgs, ID_c)
-# end def receive_service_granting_ticket_request(server, charset, DES_tgs, DES_c_tgs)
+# end def receive_service_granting_ticket_request(server, charset, DES_tgs)
 
 
 def send_service_granting_ticket(server, DES_c_tgs, DES_v, ID_c, AD_c, ID_v):
