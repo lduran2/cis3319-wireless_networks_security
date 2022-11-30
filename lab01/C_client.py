@@ -92,7 +92,9 @@ def requestKerberos(client_data, atgs_data, v_server_data):
     # (b) ticket-granting service exchange to obtain service-granting ticket
     request_with_authenticator(atgsClient, atgs_data.charset, ID_v, Ticket_tgs, DES_c_tgs, AD_c)
     # check if the ticket-granting ticket was valid
+    print('(b4)')
     sgt = receive_from_ticket(atgsClient, DES_c_tgs, ID_tgs)
+    print()
     if (not(sgt)):
         return
     DES_c_v, Ticket_v = parse_service_granting_ticket(sgt)
@@ -108,11 +110,13 @@ def requestKerberos(client_data, atgs_data, v_server_data):
     # (c) client/server authentication exchange to obtain service
     request_with_authenticator(vClient, v_server_data.charset, '', Ticket_v, DES_c_v, AD_c)
     # check if the service-granting ticket was valid
+    print('(c6)')
     service = receive_from_ticket(vClient, DES_c_v, ID_v)
+    # print label for the message
+    print('= (TS5 + 1)')
+    print()
     if (not(service)):
         return
-
-    print(file=stderr)
 
     # encode and send user input, decode messages received
     run_node.run_node(vClient, v_server_data.charset, client_data.prompt)
@@ -143,6 +147,11 @@ def receive_ticket_granting_ticket(client):
     msg_bytes = run_node.recv_blocking(client)
     # decrypt the message
     msg_chars = DES_c.decrypt(msg_bytes)
+    # log the message received
+    logging.info(f'(a2) C Received: {msg_bytes}')
+    # print the decrypted message
+    print(f'(a2) C Decrypted: {msg_chars}')
+    print()
     # split the message
     K_c_tgs, ID_tgs, TS2, Lifetime2, Ticket_tgs = msg_chars.split('||')
     # create DES for K_c_tgs
@@ -183,9 +192,11 @@ def receive_from_ticket(client, des_shared_c, prompt):
     # check if expired
     # decrypt the message
     msg_chars = des_shared_c.decrypt(msg_bytes)
+    # log the message received
+    logging.info(f'C Received: {msg_bytes}')
+    # print the decrypted message
+    print(f'C Decrypted: {msg_chars}')
     if (TICKET_EXPIRED==msg_chars):
-        print(f'from {prompt} {msg_chars}')
-        print(file=stderr)
         return False
 
     # return the message if ticket is valid

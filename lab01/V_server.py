@@ -35,6 +35,7 @@ def main(node_data, server_data):
 
     # (c) client/server authentication exchange to obtain service
     # check for service-granting ticket request with valid ticket
+    print('(c5) V acting . . .')
     service_request = receive_ticket(server, server_data.charset, DES_v)
     if (not(service_request)):
         return
@@ -44,8 +45,6 @@ def main(node_data, server_data):
     # get the timestamp and send it to client for authentication
     TS5 = parse_authenticator(DES_c_v, Authenticator_c)
     send_service(server, DES_c_v, TS5)
-
-    print(file=stderr)
 
     # encode and send user input, decode messages received
     run_node.run_node(server, server_data.charset, node_data.prompt)

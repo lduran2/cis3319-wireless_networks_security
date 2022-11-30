@@ -1,5 +1,6 @@
 import time
 from enum import Enum
+import logging
 
 # local library run_node
 import run_node
@@ -29,6 +30,9 @@ class TicketValidity(Enum):
         return TicketValidity.valueOf(now - timestamp < lifetime)
 
 def receive_ticket(server, charset, des_server):
+    # configure the logger
+    logging.basicConfig(level=logging.INFO)
+
     # (3Rx) C -> TGS: ID_v || Ticket_tgs || Authenticator_c
     # (5Rx) C -> V: Ticket_v || Authenticator_c
 
@@ -36,13 +40,18 @@ def receive_ticket(server, charset, des_server):
     msg_bytes = run_node.recv_blocking(server)
     # decode the message
     msg_chars = msg_bytes.decode(charset)
+    # log the message received
+    logging.info(f'Received: {msg_bytes}')
+    # print the decrypted message
+    print(f'Decrypted: {msg_chars}')
+    print()
 
     # split the message
     message_split = msg_chars.split('||')
     # [-2:-1] are [Ticket, Authenticator_c]
     cipher_Ticket_chars, Authenticator_c = (message_split[k] for k in range(-2,0))
     # if > 3 fields, then [0] is next server
-    next_server_ID = (msg_chars[0] if (len(message_split) >= 3) else '')
+    next_server_ID = (message_split[0] if (len(message_split) >= 3) else '')
 
     # decrypt the Ticket
     # 1st encode the ticket to the key charset
@@ -61,6 +70,10 @@ def receive_ticket(server, charset, des_server):
     TS, Lifetime = (float(ts.rstrip('\0')) for ts in (TS_str, Lifetime_str))
     # validate Ticket by its TS
     Ticket_validity = TicketValidity.validate(TS, Lifetime)
+    # print the validity
+    print(f'The ticket is {Ticket_validity}')
+    print()
+
     # filter out any expired ticket
     if (not(Ticket_validity)):
         # encrypt an expiration message
