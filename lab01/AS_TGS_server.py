@@ -37,7 +37,7 @@ KEY_CHARSET = 'Latin-1'
 # the lifetimes of tickets
 Lifetimes = { 2: 60, 4: 86400 } # [s]
 
-def requestKerberos(node_data, server_data):
+def respondKerberos(node_data, server_data):
     # configure the logger
     logging.basicConfig(level=logging.INFO)
 
@@ -54,19 +54,24 @@ def requestKerberos(node_data, server_data):
     try:
         # loop indefinitely
         while True:
-            # (a) authentication service exchange to obtain ticket granting-ticket
-            ID_c = receive_ticket_granting_ticket_request(server, server_data.charset)
-            DES_c_tgs = send_ticket_granting_ticket(server, DES_c, DES_tgs, ID_c, AD_c)
-
-            server_ticket_granting(server, server_data.charset, DES_tgs, DES_v, AD_c)
+            serve_authentication(server, server_data.charset, DES_c, DES_tgs, AD_c)
+            serve_ticket_granting(server, server_data.charset, DES_tgs, DES_v, AD_c)
         # end while True
     finally:
         # close the node
         server.close()
-# end def requestKerberos(node_data, server_data)
+# end def respondKerberos(node_data, server_data)
 
 
-def server_ticket_granting(server, charset, DES_tgs, DES_v, AD_c):
+def serve_authentication(server, charset, DES_c, DES_tgs, AD_c):
+    # (a) authentication service exchange to obtain ticket granting-ticket
+    ID_c = receive_ticket_granting_ticket_request(server, charset)
+    send_ticket_granting_ticket(server, DES_c, DES_tgs, ID_c, AD_c)
+# end def serve_authentication(server, charset, DES_c, DES_tgs, AD_c)
+
+
+
+def serve_ticket_granting(server, charset, DES_tgs, DES_v, AD_c):
     # (b) ticket-granting service exchange to obtain service-granting ticket
     # check for service-granting ticket request with valid ticket
     sgt_request = receive_service_granting_ticket_request(server, charset, DES_tgs)
@@ -76,7 +81,7 @@ def server_ticket_granting(server, charset, DES_tgs, DES_v, AD_c):
     ID_v, DES_c_tgs, ID_c = sgt_request
     # send the service-granting ticket
     send_service_granting_ticket(server, DES_c_tgs, DES_v, ID_c, AD_c, ID_v)
-# end def server_ticket_granting(server, charset, DES_tgs, DES_v, AD_c)
+# end def serve_ticket_granting(server, charset, DES_tgs, DES_v, AD_c)
 
 
 def receive_ticket_granting_ticket_request(server, charset):
@@ -124,8 +129,6 @@ def send_ticket_granting_ticket(server, DES_c, DES_tgs, ID_c, AD_c):
     cipher_shared_key_ticket = DES_c.encrypt(plain_shared_key_ticket)
     # send it
     server.send(cipher_shared_key_ticket)
-
-    return DES_c_tgs
 # end def send_ticket_granting_ticket(server, ID_c, AD_c)
 
 
@@ -217,6 +220,6 @@ def send_service_granting_ticket(server, DES_c_tgs, DES_v, ID_c, AD_c, ID_v):
 
 # run the server until SENTINEL is given
 if __name__ == '__main__':
-    requestKerberos(NODE, SERVER)
+    respondKerberos(NODE, SERVER)
 # end if __name__ == '__main__'
 
