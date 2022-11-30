@@ -58,20 +58,25 @@ def requestKerberos(node_data, server_data):
             ID_c = receive_ticket_granting_ticket_request(server, server_data.charset)
             DES_c_tgs = send_ticket_granting_ticket(server, DES_c, DES_tgs, ID_c, AD_c)
 
-            # (b) ticket-granting service exchange to obtain service-granting ticket
-            # check for service-granting ticket request with valid ticket
-            sgt_request = receive_service_granting_ticket_request(server, server_data.charset, DES_tgs, DES_c_tgs)
-            if (not(sgt_request)):
-                continue
-            # split the service-granting ticket request
-            ID_v, DES_c_tgs, ID_c = sgt_request
-            # send the service-granting ticket
-            send_service_granting_ticket(server, DES_c_tgs, DES_v, ID_c, AD_c, ID_v)
+            server_ticket_granting(server, server_data.charset, DES_tgs, DES_c_tgs, DES_v, AD_c)
         # end while True
     finally:
         # close the node
         server.close()
 # end def requestKerberos(node_data, server_data)
+
+
+def server_ticket_granting(server, charset, DES_tgs, DES_c_tgs, DES_v, AD_c):
+    # (b) ticket-granting service exchange to obtain service-granting ticket
+    # check for service-granting ticket request with valid ticket
+    sgt_request = receive_service_granting_ticket_request(server, charset, DES_tgs, DES_c_tgs)
+    if (not(sgt_request)):
+        return
+    # split the service-granting ticket request
+    ID_v, DES_c_tgs, ID_c = sgt_request
+    # send the service-granting ticket
+    send_service_granting_ticket(server, DES_c_tgs, DES_v, ID_c, AD_c, ID_v)
+# end def server_ticket_granting(server, charset, DES_tgs, DES_c_tgs, DES_v, AD_c)
 
 
 def receive_ticket_granting_ticket_request(server, charset):
