@@ -64,36 +64,9 @@ def requestKerberos(node_data, server_data):
             if (not(sgt_request)):
                 continue
             # split the service-granting ticket request
-            ID_v, ID_c = sgt_request
-            
-            # (4Tx) TGS -> C:   E(K_c_tgs, [K_c_v || ID_v || TS4 || Ticket_v])
-            # create a random key for C/V
-            K_c_v_chars = urandom(DES_KEY_SIZE).decode(KEY_CHARSET)
-            # get a time stamp
-            TS4 = time.time()
-            # clear if need to fail
-            if (FAIL_TS4):
-                TS4 = 0
-            # end if (FAIL_TS4)
-
-            # concatenate the ticket
-            plain_Ticket_v = f'{K_c_v_chars}||{ID_c}||{AD_c}||{ID_v}||{TS4}||{Lifetimes[4]}'
-            # encrypt the ticket
-            logging.info(f'(4) Encrypting plain: {plain_Ticket_v}')
-            cipher_Ticket_v_byts = DES_v.encrypt(plain_Ticket_v)
-            cipher_Ticket_v_chars = cipher_Ticket_v_byts.decode(KEY_CHARSET)
-            
-            # concatenate the message
-            plain_shared_key_ticket = f'{K_c_v_chars}||{ID_v}||{TS4}||{Lifetimes[4]}||{cipher_Ticket_v_chars}'
-            # encrypt the message
-            logging.info(f'(4) Sending plain: {plain_shared_key_ticket}')
-            cipher_shared_key_ticket = DES_c_tgs.encrypt(plain_shared_key_ticket)
-            logging.info(f'(4) Sending cipher: {cipher_shared_key_ticket}')
-            # send it
-            server.send(cipher_shared_key_ticket)
-
-            print(file=stderr)
-            logging.info(f'finished authenticating: {ID_c}')
+            ID_v, DES_c_tgs, ID_c = sgt_request
+            # send the service-granting ticket
+            send_service_granting_ticket(server, DES_c_tgs, DES_v, ID_c, AD_c, ID_v)
         # end while True
     finally:
         # close the node
@@ -199,8 +172,40 @@ def receive_service_granting_ticket_request(server, charset, DES_tgs, DES_c_tgs)
         return False
     # end if (now - TS2 >= Lifetime2)
 
-    return (ID_v, ID_c)
+    return (ID_v, DES_c_tgs, ID_c)
 # end def receive_service_granting_ticket_request(server, charset, DES_tgs, DES_c_tgs)
+
+
+def send_service_granting_ticket(server, DES_c_tgs, DES_v, ID_c, AD_c, ID_v):
+    # (4Tx) TGS -> C:   E(K_c_tgs, [K_c_v || ID_v || TS4 || Ticket_v])
+    # create a random key for C/V
+    K_c_v_chars = urandom(DES_KEY_SIZE).decode(KEY_CHARSET)
+    # get a time stamp
+    TS4 = time.time()
+    # clear if need to fail
+    if (FAIL_TS4):
+        TS4 = 0
+    # end if (FAIL_TS4)
+
+    # concatenate the ticket
+    plain_Ticket_v = f'{K_c_v_chars}||{ID_c}||{AD_c}||{ID_v}||{TS4}||{Lifetimes[4]}'
+    # encrypt the ticket
+    logging.info(f'(4) Encrypting plain: {plain_Ticket_v}')
+    cipher_Ticket_v_byts = DES_v.encrypt(plain_Ticket_v)
+    cipher_Ticket_v_chars = cipher_Ticket_v_byts.decode(KEY_CHARSET)
+    
+    # concatenate the message
+    plain_shared_key_ticket = f'{K_c_v_chars}||{ID_v}||{TS4}||{Lifetimes[4]}||{cipher_Ticket_v_chars}'
+    # encrypt the message
+    logging.info(f'(4) Sending plain: {plain_shared_key_ticket}')
+    cipher_shared_key_ticket = DES_c_tgs.encrypt(plain_shared_key_ticket)
+    logging.info(f'(4) Sending cipher: {cipher_shared_key_ticket}')
+    # send it
+    server.send(cipher_shared_key_ticket)
+
+    print(file=stderr)
+    logging.info(f'finished authenticating: {ID_c}')
+# end def send_service_granting_ticket(server, DES_c_tgs, DES_v, ID_c, AD_c, ID_v)
 
 
 # run the server until SENTINEL is given
