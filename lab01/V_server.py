@@ -40,19 +40,21 @@ def main(node_data, server_data):
         return
     # split the service request
     Authenticator_c, DES_c_v = service_request
+    
+    TS5 = parse_authenticator(DES_c_v, Authenticator_c)
 
-    # decrypt Authenticator_c2
-    # 1st encode Authenticator_c2 to the key charset
+    # decrypt Authenticator_c
+    # 1st encode Authenticator_c to the key charset
     # this includes 0 bytes
-    cipher_Authenticator_c2_byts_untrim = Authenticator_c.encode(KEY_CHARSET)
+    cipher_Authenticator_c_byts_untrim = Authenticator_c.encode(KEY_CHARSET)
     # trim last 0 bytes
-    cipher_Authenticator_c2_byts = bytes.rstrip(cipher_Authenticator_c2_byts_untrim, b'\x00')
-    logging.info(f'(5) Received bytes: {cipher_Authenticator_c2_byts}')
-    # decrypt Authenticator_c2
-    plain_Authenticator_c2 = DES_c_v.decrypt(cipher_Authenticator_c2_byts)
+    cipher_Authenticator_c_byts = bytes.rstrip(cipher_Authenticator_c_byts_untrim, b'\x00')
+    logging.info(f'(5) Received bytes: {cipher_Authenticator_c_byts}')
+    # decrypt Authenticator_c
+    plain_Authenticator_c = DES_c_v.decrypt(cipher_Authenticator_c_byts)
     print()
-    # split Authenticator_c2
-    ID_c2, AD_c2, TS5_str = plain_Authenticator_c2.split('||')
+    # split Authenticator_c
+    ID_c, AD_c, TS5_str = plain_Authenticator_c.split('||')
     # parse the timestamp TS5
     TS5 = float(TS5_str.rstrip('\0'))
 
@@ -114,6 +116,24 @@ def receive_service_request(server, charset, DES_v):
 
     return (Authenticator_c, DES_c_v)
 # end def receive_service_request(server, charset, DES_v)
+
+
+def parse_authenticator(DES_c_v, Authenticator_c):
+    # decrypt Authenticator_c
+    # 1st encode Authenticator_c to the key charset
+    # this includes 0 bytes
+    cipher_Authenticator_c_byts_untrim = Authenticator_c.encode(KEY_CHARSET)
+    # trim last 0 bytes
+    cipher_Authenticator_c_byts = bytes.rstrip(cipher_Authenticator_c_byts_untrim, b'\x00')
+    logging.info(f'(5) Received bytes: {cipher_Authenticator_c_byts}')
+    # decrypt Authenticator_c
+    plain_Authenticator_c = DES_c_v.decrypt(cipher_Authenticator_c_byts)
+    print()
+    # split Authenticator_c
+    ID_c, AD_c, TS5_str = plain_Authenticator_c.split('||')
+    # parse the timestamp TS5
+    TS5 = float(TS5_str.rstrip('\0'))
+# end def parse_authenticator(DES_c_v, Authenticator_c)
 
 
 def send_service(server, DES_c_v, TS5):
