@@ -91,6 +91,7 @@ def requestKerberos(client_data, atgs_data, v_server_data):
 
     # (b) ticket-granting service exchange to obtain service-granting ticket
     request_service_granting_ticket(atgsClient, atgs_data.charset, Ticket_tgs, DES_c_tgs, AD_c)
+    # check if the ticket-granting ticket was valid
     sgt = receive_from_ticket(atgsClient, DES_c_tgs, ID_tgs)
     if (not(sgt)):
         return
@@ -106,6 +107,7 @@ def requestKerberos(client_data, atgs_data, v_server_data):
 
     # (c) client/server authentication exchange to obtain service
     request_service(vClient, v_server_data.charset, Ticket_v, DES_c_v, AD_c)
+    # check if the service-granting ticket was valid
     service = receive_from_ticket(vClient, DES_c_v, ID_v)
     if (not(service)):
         return

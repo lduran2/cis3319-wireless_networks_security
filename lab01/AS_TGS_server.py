@@ -54,102 +54,17 @@ def requestKerberos(node_data, server_data):
     try:
         # loop indefinitely
         while True:
-            # (1Rx) C -> AS:  ID_c || ID_tgs || TS1
-            # initialize empty to start the loop
-            msg_bytes = bytes()
-            # read in from node until bytes are read
-            while (not(msg_bytes)):
-                msg_bytes = server.recv()
+            # (a) authentication service exchange to obtain ticket granting-ticket
+            ID_c = receive_ticket_granting_ticket_request(server, server_data.charset)
+            DES_c_tgs = send_ticket_granting_ticket(server, DES_c, DES_tgs, ID_c, AD_c)
 
-            # decode the message
-            msg_chars = msg_bytes.decode(server_data.charset)
-            # log the message received
-            logging.info(f'(1Rx) Received: {msg_bytes}')
-            # print the decoded message
-            print(file=stderr, flush=True)
-            print('(1Rx) Decoded: ', end='', file=stderr, flush=True)
-            print(msg_chars)
-            # split the message
-            ID_c, ID_tgs, TS1 = msg_chars.split('||')
-
-            # (2Tx) AS -> C:    E(Kc, [K_c_tgs || ID_tgs || TS2 || Lifetime2 || Ticket_tgs])
-            # create a random key for C/TGS
-            K_c_tgs_byts = urandom(DES_KEY_SIZE)
-            K_c_tgs_chars = K_c_tgs_byts.decode(KEY_CHARSET)
-            DES_c_tgs = DES(K_c_tgs_byts)
-            # get a time stamp
-            TS2 = time.time()
-            # clear if need to fail
-            if (FAIL_TS2):
-                TS2 = 0
-            # end if (FAIL_TS2)
-
-            # concatenate the ticket
-            plain_Ticket_tgs = f'{K_c_tgs_chars}||{ID_c}||{AD_c}||{ID_tgs}||{TS2}||{Lifetimes[2]}'
-            # encrypt the ticket
-            logging.info(f'(2) Encrypting plain: {plain_Ticket_tgs}')
-            cipher_Ticket_tgs_byts = DES_tgs.encrypt(plain_Ticket_tgs)
-            cipher_Ticket_tgs_chars = cipher_Ticket_tgs_byts.decode(KEY_CHARSET)
-            
-            # concatenate the message
-            plain_shared_key_ticket = f'{K_c_tgs_chars}||{ID_tgs}||{TS2}||{Lifetimes[2]}||{cipher_Ticket_tgs_chars}'
-            # encrypt the message
-            logging.info(f'(2) Sending plain: {plain_shared_key_ticket}')
-            cipher_shared_key_ticket = DES_c.encrypt(plain_shared_key_ticket)
-            # send it
-            server.send(cipher_shared_key_ticket)
-
-            # (3Rx) C -> TGS: ID_v || Ticket_tgs || Authenticator_c
-            # initialize empty to start the loop
-            msg_bytes = bytes()
-            # read in from node until bytes are read
-            while (not(msg_bytes)):
-                msg_bytes = server.recv()
-            
-            # decode the message
-            msg_chars = msg_bytes.decode(server_data.charset)
-            # log the message received
-            logging.info(f'(3Rx) Received: {msg_bytes}')
-            # print the decoded message
-            print(file=stderr, flush=True)
-            print('(3Rx) Decoded: ', end='', file=stderr, flush=True)
-            print(msg_chars)
-            # split the message
-            ID_v, cipher_Ticket_tgs_1o_chars, Authenticator_c = msg_chars.split('||')
-            logging.info(f'cipher_Ticket_tgs_1o_chars: "{cipher_Ticket_tgs_1o_chars}"')
-            logging.info(f'cipher_Ticket_tgs_chars   : "{cipher_Ticket_tgs_chars}"')
-            
-            # decrypt the Ticket_tgs'
-            # 1st encode the ticket to the key charset
-            # this includes 0 bytes
-            cipher_Ticket_tgs_1o_byts_untrim = cipher_Ticket_tgs_1o_chars.encode(KEY_CHARSET)
-            # trim last 0 bytes
-            cipher_Ticket_tgs_1o_byts = bytes.rstrip(cipher_Ticket_tgs_1o_byts_untrim, b'\x00')
-            logging.info(f'cipher_Ticket_tgs_1o_byts_untrim: "{cipher_Ticket_tgs_1o_byts_untrim}"')
-            logging.info(f'cipher_Ticket_tgs_1o_byts       : "{cipher_Ticket_tgs_1o_byts}"')
-            logging.info(f'cipher_Ticket_tgs_byts          : "{cipher_Ticket_tgs_byts}"')
-            print(file=stderr, flush=True)
-            # decrypt the ticket
-            plain_Ticket_tgs_1o = DES_tgs.decrypt(cipher_Ticket_tgs_1o_byts)
-            logging.info(f'decrypted: "{plain_Ticket_tgs_1o}"')
-            print()
-            # split the ticket
-            K_c_tgs_chars_1o, ID_c_1o, AD_c_1o, ID_tgs_1o, TS2_1o_str, Lifetime2_1o_str = plain_Ticket_tgs_1o.split('||')
-
-            # parse timestamps
-            TS2_1o, Lifetime2_1o = (float(ts.rstrip('\0')) for ts in (TS2_1o_str, Lifetime2_1o_str))
-            # validate Ticket_tgs' by its TS2
-            Ticket_tgs_1o_validity = TicketValidity.validate(TS2_1o, Lifetime2_1o)
-            print(f'This ticket is {Ticket_tgs_1o_validity.name}.')
-            # filter out any expired ticket
-            if (not(Ticket_tgs_1o_validity)):
-                # encrypt an expiration message
-                cipher_expire = DES_c_tgs.encrypt(TICKET_EXPIRED)
-                # send expiration message
-                server.send(cipher_expire)
-                # listen for a new message
+            # (b) ticket-granting service exchange to obtain service-granting ticket
+            # check for service-granting ticket request with valid ticket
+            sgt_request = receive_service_granting_ticket_request(server, server_data.charset, DES_tgs, DES_c_tgs)
+            if (not(sgt_request)):
                 continue
-            # end if (now - TS2_1o >= Lifetime2_1o)
+            # split the service-granting ticket request
+            ID_v, ID_c = sgt_request
             
             # (4Tx) TGS -> C:   E(K_c_tgs, [K_c_v || ID_v || TS4 || Ticket_v])
             # create a random key for C/V
@@ -184,6 +99,109 @@ def requestKerberos(node_data, server_data):
         # close the node
         server.close()
 # end def requestKerberos(node_data, server_data)
+
+
+def receive_ticket_granting_ticket_request(server, charset):
+    # (1Rx) C -> AS:  ID_c || ID_tgs || TS1
+    # receive the message
+    msg_bytes = run_node.recv_blocking(server)
+    # decode the message
+    msg_chars = msg_bytes.decode(charset)
+    # log the message received
+    logging.info(f'(1Rx) Received: {msg_bytes}')
+    # print the decoded message
+    print(file=stderr, flush=True)
+    print('(1Rx) Decoded: ', end='', file=stderr, flush=True)
+    print(msg_chars)
+    # split the message
+    ID_c, ID_tgs, TS1 = msg_chars.split('||')
+    return ID_c
+# end def receive_ticket_granting_ticket_request(server, charset)
+
+
+def send_ticket_granting_ticket(server, DES_c, DES_tgs, ID_c, AD_c):
+    # (2Tx) AS -> C:    E(Kc, [K_c_tgs || ID_tgs || TS2 || Lifetime2 || Ticket_tgs])
+    # create a random key for C/TGS
+    K_c_tgs_byts = urandom(DES_KEY_SIZE)
+    K_c_tgs_chars = K_c_tgs_byts.decode(KEY_CHARSET)
+    DES_c_tgs = DES(K_c_tgs_byts)
+    # get a time stamp
+    TS2 = time.time()
+    # clear if need to fail
+    if (FAIL_TS2):
+        TS2 = 0
+    # end if (FAIL_TS2)
+
+    # concatenate the ticket
+    plain_Ticket_tgs = f'{K_c_tgs_chars}||{ID_c}||{AD_c}||{ID}||{TS2}||{Lifetimes[2]}'
+    # encrypt the ticket
+    logging.info(f'(2) Encrypting plain: {plain_Ticket_tgs}')
+    cipher_Ticket_tgs_byts = DES_tgs.encrypt(plain_Ticket_tgs)
+    cipher_Ticket_tgs_chars = cipher_Ticket_tgs_byts.decode(KEY_CHARSET)
+    
+    # concatenate the message
+    plain_shared_key_ticket = f'{K_c_tgs_chars}||{ID}||{TS2}||{Lifetimes[2]}||{cipher_Ticket_tgs_chars}'
+    # encrypt the message
+    logging.info(f'(2) Sending plain: {plain_shared_key_ticket}')
+    cipher_shared_key_ticket = DES_c.encrypt(plain_shared_key_ticket)
+    # send it
+    server.send(cipher_shared_key_ticket)
+
+    return DES_c_tgs
+# end def send_ticket_granting_ticket(server, ID_c, AD_c)
+
+
+def receive_service_granting_ticket_request(server, charset, DES_tgs, DES_c_tgs):
+    # (3Rx) C -> TGS: ID_v || Ticket_tgs || Authenticator_c
+
+    # receive the message
+    msg_bytes = run_node.recv_blocking(server)
+    # decode the message
+    msg_chars = msg_bytes.decode(charset)
+    # log the message received
+    logging.info(f'(3Rx) Received: {msg_bytes}')
+    # print the decoded message
+    print(file=stderr, flush=True)
+    print('(3Rx) Decoded: ', end='', file=stderr, flush=True)
+    print(msg_chars)
+    # split the message
+    ID_v, cipher_Ticket_tgs_chars, Authenticator_c = msg_chars.split('||')
+    logging.info(f'cipher_Ticket_tgs_chars   : "{cipher_Ticket_tgs_chars}"')
+    
+    # decrypt the Ticket_tgs'
+    # 1st encode the ticket to the key charset
+    # this includes 0 bytes
+    cipher_Ticket_tgs_byts_untrim = cipher_Ticket_tgs_chars.encode(KEY_CHARSET)
+    # trim last 0 bytes
+    cipher_Ticket_tgs_byts = bytes.rstrip(cipher_Ticket_tgs_byts_untrim, b'\x00')
+    logging.info(f'cipher_Ticket_tgs_byts_untrim: "{cipher_Ticket_tgs_byts_untrim}"')
+    logging.info(f'cipher_Ticket_tgs_byts       : "{cipher_Ticket_tgs_byts}"')
+    print(file=stderr, flush=True)
+    # decrypt the ticket
+    plain_Ticket_tgs = DES_tgs.decrypt(cipher_Ticket_tgs_byts)
+    logging.info(f'decrypted: "{plain_Ticket_tgs}"')
+    print()
+    # split the ticket
+    K_c_tgs_chars, ID_c, AD_c, ID_tgs, TS2_str, Lifetime2_str = plain_Ticket_tgs.split('||')
+
+    # parse timestamps
+    TS2, Lifetime2 = (float(ts.rstrip('\0')) for ts in (TS2_str, Lifetime2_str))
+    # validate Ticket_tgs' by its TS2
+    Ticket_tgs_validity = TicketValidity.validate(TS2, Lifetime2)
+    print(f'This ticket is {Ticket_tgs_validity.name}.')
+    # filter out any expired ticket
+    if (not(Ticket_tgs_validity)):
+        # encrypt an expiration message
+        cipher_expire = DES_c_tgs.encrypt(TICKET_EXPIRED)
+        # send expiration message
+        server.send(cipher_expire)
+        # listen for a new message
+        return False
+    # end if (now - TS2 >= Lifetime2)
+
+    return (ID_v, ID_c)
+# end def receive_service_granting_ticket_request(server, charset, DES_tgs, DES_c_tgs)
+
 
 # run the server until SENTINEL is given
 if __name__ == '__main__':
