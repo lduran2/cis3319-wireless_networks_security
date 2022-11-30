@@ -40,25 +40,11 @@ def main(node_data, server_data):
         return
     # split the service request
     Authenticator_c, DES_c_v = service_request
-    
+    # get the timestamp and send it to client for authentication
     TS5 = parse_authenticator(DES_c_v, Authenticator_c)
-
-    # decrypt Authenticator_c
-    # 1st encode Authenticator_c to the key charset
-    # this includes 0 bytes
-    cipher_Authenticator_c_byts_untrim = Authenticator_c.encode(KEY_CHARSET)
-    # trim last 0 bytes
-    cipher_Authenticator_c_byts = bytes.rstrip(cipher_Authenticator_c_byts_untrim, b'\x00')
-    logging.info(f'(5) Received bytes: {cipher_Authenticator_c_byts}')
-    # decrypt Authenticator_c
-    plain_Authenticator_c = DES_c_v.decrypt(cipher_Authenticator_c_byts)
-    print()
-    # split Authenticator_c
-    ID_c, AD_c, TS5_str = plain_Authenticator_c.split('||')
-    # parse the timestamp TS5
-    TS5 = float(TS5_str.rstrip('\0'))
-
     send_service(server, DES_c_v, TS5)
+
+    print(file=stderr)
 
     # encode and send user input, decode messages received
     run_node.run_node(server, server_data.charset, node_data.prompt)
@@ -74,12 +60,6 @@ def receive_service_request(server, charset, DES_v):
     msg_bytes = run_node.recv_blocking(server)
     # decode the message
     msg_chars = msg_bytes.decode(charset)
-    # log the message received
-    logging.info(f'(5Rx) Received: {msg_bytes}')
-    # print the decoded message
-    print(file=stderr, flush=True)
-    print('(5Rx) Decoded: ', end='', file=stderr, flush=True)
-    print(msg_chars)
     # split the message
     cipher_Ticket_v_chars, Authenticator_c = msg_chars.split('||')
 
@@ -91,7 +71,6 @@ def receive_service_request(server, charset, DES_v):
     cipher_Ticket_v_byts = bytes.rstrip(cipher_Ticket_v_byts_untrim, b'\x00')
     # decrypt the ticket
     plain_Ticket_v = DES_v.decrypt(cipher_Ticket_v_byts)
-    print()
     # split the ticket
     K_c_v, ID_c, AD_c, ID_v, TS4_str, Lifetime4_str = plain_Ticket_v.split('||')
     # create DES for K_c_v
@@ -102,12 +81,10 @@ def receive_service_request(server, charset, DES_v):
     TS4, Lifetime4 = (float(ts.rstrip('\0')) for ts in (TS4_str, Lifetime4_str))
     # validate Ticket_v by its TS4
     Ticket_v_validity = TicketValidity.validate(TS4, Lifetime4)
-    print(f'This ticket is {Ticket_v_validity.name}.')
     # filter out any expired ticket
     if (not(Ticket_v_validity)):
         # encrypt an expiration message
         cipher_expire = DES_c_v.encrypt(TICKET_EXPIRED)
-        logging.info(f'(5Rx) Sending cipher: {cipher_expire}')
         # send expiration message
         server.send(cipher_expire)
         # listen for a new message
@@ -125,14 +102,14 @@ def parse_authenticator(DES_c_v, Authenticator_c):
     cipher_Authenticator_c_byts_untrim = Authenticator_c.encode(KEY_CHARSET)
     # trim last 0 bytes
     cipher_Authenticator_c_byts = bytes.rstrip(cipher_Authenticator_c_byts_untrim, b'\x00')
-    logging.info(f'(5) Received bytes: {cipher_Authenticator_c_byts}')
     # decrypt Authenticator_c
     plain_Authenticator_c = DES_c_v.decrypt(cipher_Authenticator_c_byts)
-    print()
+    logging.info(plain_Authenticator_c)
     # split Authenticator_c
     ID_c, AD_c, TS5_str = plain_Authenticator_c.split('||')
     # parse the timestamp TS5
     TS5 = float(TS5_str.rstrip('\0'))
+    return TS5
 # end def parse_authenticator(DES_c_v, Authenticator_c)
 
 
@@ -141,8 +118,6 @@ def send_service(server, DES_c_v, TS5):
     plain_success = f'{TS5 + 1}'
     cipher_success = DES_c_v.encrypt(plain_success)
     server.send(cipher_success)
-
-    print(file=stderr)
 # end def send_service(server, DES_c_v, TS5)
 
 
