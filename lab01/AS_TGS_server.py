@@ -70,7 +70,6 @@ def serve_authentication(server, charset, DES_c, DES_tgs, AD_c):
 # end def serve_authentication(server, charset, DES_c, DES_tgs, AD_c)
 
 
-
 def serve_ticket_granting(server, charset, DES_tgs, DES_v, AD_c):
     # (b) ticket-granting service exchange to obtain service-granting ticket
     # check for service-granting ticket request with valid ticket
@@ -161,7 +160,7 @@ def send_service_granting_ticket(server, DES_c_tgs, DES_v, ID_c, AD_c, ID_v):
 # end def send_service_granting_ticket(server, DES_c_tgs, DES_v, ID_c, AD_c, ID_v)
 
 
-def create_ticket(server, des, ID_c, AD_c, server_ID, fail_timestamp, Lifetime):
+def create_ticket(server, des_destination, ID_c, AD_c, server_ID, fail_timestamp, Lifetime):
     # create a random key
     K_to_share_byts = urandom(DES_KEY_SIZE)
     K_to_share_chars = K_to_share_byts.decode(KEY_CHARSET)
@@ -175,11 +174,11 @@ def create_ticket(server, des, ID_c, AD_c, server_ID, fail_timestamp, Lifetime):
     # concatenate the ticket
     plain_Ticket = f'{K_to_share_chars}||{ID_c}||{AD_c}||{server_ID}||{TS}||{Lifetime}'
     # encrypt the ticket
-    cipher_Ticket_byts = des.encrypt(plain_Ticket)
+    cipher_Ticket_byts = des_destination.encrypt(plain_Ticket)
     cipher_Ticket_chars = cipher_Ticket_byts.decode(KEY_CHARSET)
 
     return (K_to_share_chars, TS, cipher_Ticket_chars)
-# end def create_ticket(server, des, ID_c, AD_c, server_ID, fail_timestamp, Lifetime)
+# end def create_ticket(server, des_destination, ID_c, AD_c, server_ID, fail_timestamp, Lifetime)
 
 
 # run the server until SENTINEL is given
