@@ -1,5 +1,6 @@
 import random
 from math import gcd
+from collections import deque
 
 def main():
     # prime numbers in [137, 311]
@@ -25,8 +26,8 @@ def main():
     # find the public key, the first number with non-ONE GCDs
     # with PHI(n)
     e = next(gen_with_CD(nums_2_99, PHI_n))
-    # print PHI(n), e, their gcd
-    print(PHI_n, e, gcd(PHI_n, e))
+    # find the private key
+    d = sum(gen_private_key_addend(PHI_n,e))
 
 def gen_with_CD(arr, ref):
     # yield each integer, k, in vector, arr, s.t. k has a common
@@ -34,5 +35,31 @@ def gen_with_CD(arr, ref):
     for k in arr:
         if (1 != gcd(ref, k)):
             yield k
+
+def gen_private_key_addend(PHI_n, e):
+    # reference original PHI_n
+    ref_PHI_n = PHI_n
+    # no division by 0 yet
+    div0 = False
+    # create deque of last 2 T-values
+    T_tuple = (1, 0)
+    T = deque(T_tuple, len(T_tuple))
+    # loop until division by 0
+    while (not(div0)):
+        # try dividing
+        try:
+            (q, r) = divmod(PHI_n, e)
+        except ZeroDivisionError as ex:
+            # flag division by 0 if unsuccessful
+            div0 = True
+            continue
+        # enqueue new T
+        T.appendleft(T[-1] - (T[0]*q))
+        # calculate and yield the addend
+        addend = ((T[0] % ref_PHI_n) if (1==r) else 0)
+        yield addend
+        print(PHI_n, e, r, q, T, addend)
+        # update the totient and public key
+        PHI_n, e = (e, r)
 
 main()
