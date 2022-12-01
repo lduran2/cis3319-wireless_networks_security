@@ -2,14 +2,42 @@ import random
 from math import gcd
 from collections import deque
 
-def main():
-    # prime numbers in [137, 311]
-    PRIMES = [
-        137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199,
-        211, 223, 227, 229, 233, 237, 239, 241, 251, 257, 263, 269, 271, 277,
-        281, 283, 293, 307, 311
-    ]
+DEBUG_MODE = False
 
+# prime numbers in [137, 311]
+PRIMES = [
+    137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199,
+    211, 223, 227, 229, 233, 237, 239, 241, 251, 257, 263, 269, 271, 277,
+    281, 283, 293, 307, 311
+]
+
+# to shift from upper case to lower case
+ord_shift = 32
+
+# ASCII range of alphabetic characters
+ordA = ord('A')
+ordZ = ord('Z')
+rangeAZ = range(ordA, (ordZ + 1))
+
+def main():
+    selectKey()
+    encode_block("please help me now!")
+
+def encode_block(msg: str):
+    # convert to upper case ASCII values
+    upper_ords = ((ord(c) & ~ord_shift) for c in msg)
+    # filter out all non-letter characters, convert to letter code
+    letter_codes = ((c - ordA) for c in upper_ords if c in rangeAZ)
+    # convert to trigraphs
+    trigraphs = splitModIndex(tuple(letter_codes), 3)
+    # convert to trigraph codes
+    trigraph_codes = (polysubs(tri, 26) for tri in trigraphs)
+    print(tuple(trigraph_codes))
+
+def decode():
+    pass
+
+def selectKey():
     # retrieve 2 random primes
     p, q = random.sample(PRIMES, 2)
 
@@ -28,6 +56,11 @@ def main():
     e = next(gen_with_CD(nums_2_99, PHI_n))
     # find the private key
     d = sum(gen_private_key_addend(PHI_n,e))
+
+    # key test
+    R_EXPC = 1
+    assert ((e*d % PHI_n) != R_EXPC),\
+        f'Multiplying public key {e} by the private key {d}, and dividing by the Euler totient {PHI_n} should leave a remainder of {R_EXPC}'
 
 def gen_with_CD(arr, ref):
     # yield each integer, k, in vector, arr, s.t. k has a common
@@ -58,8 +91,22 @@ def gen_private_key_addend(PHI_n, e):
         # calculate and yield the addend
         addend = ((T[0] % ref_PHI_n) if (1==r) else 0)
         yield addend
-        print(PHI_n, e, r, q, T, addend)
+        if (DEBUG_MODE):
+            print(PHI_n, e, r, q, T, addend)
         # update the totient and public key
         PHI_n, e = (e, r)
+
+def splitModIndex(v, n):
+    return zip(*(v[k::n] for k in range(0,n)))
+
+def polysubs(v, s):
+    '''
+    Substitutes for variable s in the polynomial represented by v s.t.
+        P(s) = v.(s^L | k in N(L + k + 1 = n)).
+    @param v = a vector of coefficients in descending order
+    @param s = the value to substitute for s
+    '''
+    n = len(v)
+    return sum(v[k]*(s**(n - k - 1)) for k in range(0,n))
 
 main()
