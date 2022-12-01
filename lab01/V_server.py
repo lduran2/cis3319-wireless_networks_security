@@ -46,8 +46,9 @@ def main(node_data, server_data):
     TS5 = parse_authenticator(DES_c_v, Authenticator_c)
     send_service(server, DES_c_v, TS5)
 
-    # encode and send user input, decode messages received
-    run_node.run_node(server, server_data.charset, node_data.prompt)
+    # encrypt and send user input, decrypt messages received
+    # use DES_c_v as the DES encrypter, not enc_key
+    run_node.run_node(server, DES_c_v, server_data.charset, node_data.prompt)
     # close the node
     server.close()
 # end def main(node_data, server_data)

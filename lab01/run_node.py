@@ -37,6 +37,9 @@ nodes_config_data = {
         for node in NODE_CONFIG_DATA_KEYS }
 
 # load name of files containing the keys
+# ENC_FILE holds the default key for DES used in main
+#   However, the Kerberos generates its own shared key.
+# MAC_FILE holds the key for SHA256 used in hashing the MAC authentication.
 ENC_FILE, MAC_FILE = (
     config['node'][key] for key in ('enc_key_file', 'mac_key_file'))
 # load string that ends the input stream
@@ -111,27 +114,27 @@ def main(connecting_status: str, node_init: 'Callable[[addr, port], Node]', addr
     # create a node
     logging.info(f'{connecting_status} {addr}:{port} . . .')
     node = node_init(addr, port)
-    # encode and send user input, decode messages received
-    run_node(node, charset, prompt)
+    # read in the key word for encryption
+    enc_key = KeyManager.read_key(ENC_FILE)
+    # generate the DES key for encryption
+    # and reverse key for decryption
+    des = DES(enc_key)
+    # encrypt and send user input, decrypt messages received
+    run_node(node, des, charset, prompt)
     # close the node
     node.close()
 # end main(connecting_status: str, node_init: 'Callable[[addr, port], Node]', addr: str, port: int, charset: str, prompt: str)
 
 # run the node until SENTINEL is given
-def run_node(node: Node, charset: str, prompt: str):
+def run_node(node: Node, des: DES, charset: str, prompt: str):
     '''
     Runs an existing node.
     '''
     # configure the logger
     logging.basicConfig(level=logging.INFO)
 
-    # read in the key word for encryption
-    enc_key = KeyManager.read_key(ENC_FILE)
     # read in the key word for HMAC
     mac_key = KeyManager.read_key(MAC_FILE)
-    # generate the DES key for encryption
-    # and reverse key for decryption
-    des = DES(enc_key)
 
     # create the encoder
     # use the given charset

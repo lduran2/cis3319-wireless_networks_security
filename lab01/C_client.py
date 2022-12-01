@@ -118,8 +118,9 @@ def requestKerberos(client_data, atgs_data, v_server_data):
     if (not(service)):
         return
 
-    # encode and send user input, decode messages received
-    run_node.run_node(vClient, v_server_data.charset, client_data.prompt)
+    # encrypt and send user input, decrypt messages received
+    # use DES_c_v as the DES encrypter, not enc_key
+    run_node.run_node(vClient, DES_c_v, v_server_data.charset, client_data.prompt)
     # close the chat client
     vClient.close()
 # end def requestKerberos()
