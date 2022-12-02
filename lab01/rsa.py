@@ -1,10 +1,10 @@
 import random
 from math import gcd
 from collections import deque
+from itertools import chain
 
 DEBUG_MODE = True
 SEED_RANDOM = True
-
 if (SEED_RANDOM):
     random.seed(42)
 
@@ -25,6 +25,10 @@ ord_shift = 32
 ordA = ord('A')
 ordZ = ord('Z')
 rangeAZ = range(ordA, (ordZ + 1))
+lenAZ = len(rangeAZ)
+
+# number of rounds used for encoding
+N_ENCODE_ROUNDS = 18
 
 def main():
     encode_block("please help me now!")
@@ -39,14 +43,36 @@ def encode_block(msg: str):
     # convert to trigraphs
     trigraphs = splitModIndex(tuple(letter_codes), 3)
     # convert to trigraph codes
-    trigraph_codes = (polysubs(tri, 26) for tri in trigraphs)
+    trigraph_codes = (polysubs(tri, lenAZ) for tri in trigraphs)
+    if (DEBUG_MODE):
+        # make a tuple, so it can be reused
+        trigraph_codes = tuple(trigraph_codes)
+        print({'trigraphs': trigraph_codes})
 
+    ciphertexts = (encode_trigraph(n, e, trigraph) for trigraph in trigraph_codes)
+    if (DEBUG_MODE):
+        # make a tuple, so it can be reused
+        ciphertexts = tuple(ciphertexts)
+        print({'ciphertexts': tuple(ciphertexts)})
+
+    quadragraphs = (polyunsubs(ciph, lenAZ, 4) for ciph in ciphertexts)
+    quadragraph_chrs = ((chr(letter + ordA) for letter in quadragraph) for quadragraph in quadragraphs)
+
+    print(str.join('', chain.from_iterable(quadragraph_chrs)))
+
+
+def decode():
+    pass
+
+def encode_trigraph(n, e, trigraph):
+    if (DEBUG_MODE):
+        print({'n': n, 'e': e})
     # initialize quotient, dividend, [trigraph^KEY mod Modulus]
     Q = e
-    dividend = next(trigraph_codes)
+    dividend = trigraph
     ciphertext = 1
     # calculate trigraph^Q mod Modulus
-    for k in range(18):
+    for k in range(N_ENCODE_ROUNDS):
         # quotient mod 2, or bit #0 of Q
         Q0 = (Q & 1)
         # trigraph^Q mod Modulus
@@ -56,10 +82,8 @@ def encode_block(msg: str):
         # update quotient, dividend
         Q = (Q >> 1)
         dividend = (pow_tri_Q*pow_tri_Q)
-    print({'ciphertext': ciphertext})
+    return ciphertext
 
-def decode():
-    pass
 
 def selectKey():
     # retrieve 2 random primes
@@ -73,21 +97,27 @@ def selectKey():
     # calculate Euler totient PHI(n)
     PHI_n = ((p - 1)*(q - 1))
 
-    # the numbers [2..99]
-    nums_2_99 = list(range(2, 99))
-    # shuffle the numbers
-    random.shuffle(nums_2_99)
+    # candidates for e in [2..99]
+    e_candidates = list(range(2, 99))
+    # shuffle the candidates
+    random.shuffle(e_candidates)
 
     # find the public key, the first number with GCD = 1
     # with PHI(n)
-    e = next(gen_coprimes(nums_2_99, PHI_n))
+    e = next(gen_coprimes(e_candidates, PHI_n))
     # find the private key
-    d = sum(gen_private_key_summand(PHI_n,e))
+    d = sum(gen_private_key_summand(PHI_n, e))
+    if (DEBUG_MODE):
+        print({'e': e})
 
     # key test
     _, r_calc = divmod((e*d), PHI_n)
     assert (r_calc == R_EXPC),\
-        f'Multiplying public key {e} by the private key {d}, and dividing by the Euler totient {PHI_n} should leave a remainder of {R_EXPC}, but is {r_calc}.'
+        (
+            f'Multiplying public key {e} by the private key {d}, and'
+            f' dividing by the Euler totient {PHI_n} should leave a'
+            f' remainder of {R_EXPC}, but is {r_calc}.'
+        )
 
     return (n, e)
 
@@ -114,7 +144,7 @@ def gen_private_key_summand(PHI_n, e):
             # flag division by 0 if unsuccessful
             div0 = True
             continue
-        # enqueue new T
+        # calculate and enqueue new T
         T.appendleft(T[1] - (T[0]*q))
         # calculate and yield the summand
         summand = (divmod(T[0], ref_PHI_n)[1] if (1==r) else 0)
@@ -138,7 +168,7 @@ def polysubs(v, s):
     n = len(v)
     return sum(v[k]*(s**(n - k - 1)) for k in range(n))
 
-def polyunsubs(total, s):
+def polyunsubs(total, s, min_coefs=0):
     '''
     Finds the tuple of the coefficients representing the polynomial on
     s for which substituting for s, s.t.
@@ -146,8 +176,13 @@ def polyunsubs(total, s):
     will give the given total.
     @param total = value of P(s)
     @param s = the value to substitute for s
+    @param min_coefs = minimum number of coefficients
     '''
-    return tuple(reversed(tuple(genpolyunsubs(total, s))))
+    unpadded = tuple(reversed(tuple(genpolyunsubs(total, s))))
+    n_pad = (min_coefs - len(unpadded))
+    return ((((0,)*n_pad) + unpadded)
+        if (len(unpadded) > 0)
+        else unpadded)
 
 def genpolyunsubs(total, s):
     '''
