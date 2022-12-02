@@ -4,6 +4,7 @@ from collections import deque
 from itertools import chain
 
 DEBUG_MODE = True
+DEBUG_MODE_CODEC_GRAPH = False
 SEED_RANDOM = True
 if (SEED_RANDOM):
     random.seed(42)
@@ -31,13 +32,20 @@ lenAZ = len(rangeAZ)
 N_ENCODE_ROUNDS = 18
 
 def main():
-    encode_block("please help me now!")
+    n, e, d = selectKey()
+    ciphertext = encode(n, e, 'please help me now!')
+    decode_block(n, d, ciphertext)
 
-def encode_block(msg: str):
-    n, e = selectKey()
+def encode(n: int, e: int, msg: str) -> str:
+    quadragraphs = encode_block(n, e, msg)
+    ciphertext = str.join('', chain.from_iterable(quadragraphs))
+    if (DEBUG_MODE):
+        print({'ciphertext': ciphertext})
+    return ciphertext
 
+def encode_block(n: int, e: int, block: str) -> str:
     # convert to upper case ASCII values
-    upper_ords = ((ord(c) & ~ord_shift) for c in msg)
+    upper_ords = ((ord(c) & ~ord_shift) for c in block)
     # filter out all non-letter characters, convert to letter code
     letter_codes = ((c - ordA) for c in upper_ords if c in rangeAZ)
     # convert to trigraphs
@@ -53,16 +61,25 @@ def encode_block(msg: str):
     if (DEBUG_MODE):
         # make a tuple, so it can be reused
         ciphertexts = tuple(ciphertexts)
-        print({'ciphertexts': tuple(ciphertexts)})
+        print({'ciphertexts': ciphertexts})
 
     quadragraphs = (polyunsubs(ciph, lenAZ, 4) for ciph in ciphertexts)
     quadragraph_chrs = ((chr(letter + ordA) for letter in quadragraph) for quadragraph in quadragraphs)
 
-    print(str.join('', chain.from_iterable(quadragraph_chrs)))
+    return quadragraph_chrs
 
-
-def decode():
-    pass
+def decode_block(n: int, d: int, block: str):
+    # split block into letter codes
+    letter_codes = ((ord(c) - ordA) for c in block)
+    # group into quads
+    quadragraphs = splitModIndex(tuple(letter_codes), 4)
+    # convert to quadgraph codes
+    quadragraph_codes = (polysubs(quad, lenAZ) for quad in quadragraphs)
+    plaintexts = (encode_trigraph(n, d, quadragraph) for quadragraph in quadragraph_codes)
+    if (DEBUG_MODE):
+        # make a tuple, so it can be reused
+        plaintexts = tuple(plaintexts)
+        print({'plaintexts': tuple(plaintexts)})
 
 def encode_trigraph(n, e, trigraph):
     if (DEBUG_MODE):
@@ -71,19 +88,23 @@ def encode_trigraph(n, e, trigraph):
     Q = e
     dividend = trigraph
     ciphertext = 1
+    # table for trigraph^Q mod Modulus
+    # index is current LSbit of public key
+    pow_tri_Q = [1, None]
     # calculate trigraph^Q mod Modulus
     for k in range(N_ENCODE_ROUNDS):
         # quotient mod 2, or bit #0 of Q
         Q0 = (Q & 1)
         # trigraph^Q mod Modulus
-        _, pow_tri_Q = divmod(dividend, n)
+        _, pow_tri_Q[1] = divmod(dividend, n)
         # the ciphertext = (trigraph^KEY mod Modulus)
-        _, ciphertext = divmod((ciphertext*(pow_tri_Q if Q0 else 1)), n)
+        _, ciphertext = divmod((ciphertext * pow_tri_Q[Q0]), n)
         # update quotient, dividend
         Q = (Q >> 1)
-        dividend = (pow_tri_Q*pow_tri_Q)
+        dividend = (pow_tri_Q[1]*pow_tri_Q[1])
+        if (DEBUG_MODE_CODEC_GRAPH):
+            print({'Q': Q, 'pow_tri_Q': pow_tri_Q, 'ciphertext': ciphertext})
     return ciphertext
-
 
 def selectKey():
     # retrieve 2 random primes
@@ -108,7 +129,7 @@ def selectKey():
     # find the private key
     d = sum(gen_private_key_summand(PHI_n, e))
     if (DEBUG_MODE):
-        print({'e': e})
+        print({'e': e, 'd': d})
 
     # key test
     _, r_calc = divmod((e*d), PHI_n)
@@ -119,7 +140,7 @@ def selectKey():
             f' remainder of {R_EXPC}, but is {r_calc}.'
         )
 
-    return (n, e)
+    return (n, e, d)
 
 def gen_coprimes(arr, ref):
     # yield each integer, k, in vector, arr, s.t. (1 == GCD(ref, k))
