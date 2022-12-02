@@ -34,65 +34,74 @@ N_CODEC_ROUNDS = 18
 def main():
     n, e, d = selectKey()
     ciphertext = encode(n, e, 'please help me now!')
-    decode_block(n, d, ciphertext)
+    decode(n, d, ciphertext)
 
 def encode(n: int, e: int, msg: str) -> str:
+    if (DEBUG_MODE):
+        print()
+        print('encode:')
     quadragraphs = encode_block(n, e, msg)
     ciphertext = str.join('', chain.from_iterable(quadragraphs))
     if (DEBUG_MODE):
         print({'ciphertext': ciphertext})
     return ciphertext
 
+def decode(n: int, d: int, msg: str) -> str:
+    if (DEBUG_MODE):
+        print()
+        print('decode:')
+    trigraphs = decode_block(n, d, msg)
+    plaintext = str.join('', chain.from_iterable(trigraphs))
+    if (DEBUG_MODE):
+        print({'plaintext': plaintext})
+    return plaintext
+
 def encode_block(n: int, e: int, block: str) -> str:
     # convert to upper case ASCII values
     upper_ords = ((ord(c) & ~ord_shift) for c in block)
-    # filter out all non-letter characters, convert to letter code
-    letter_codes = ((c - ordA) for c in upper_ords if c in rangeAZ)
-    # convert to trigraphs
-    trigraphs = splitModIndex(tuple(letter_codes), 3)
-    # convert to trigraph codes
-    trigraph_codes = (polysubs(tri, lenAZ) for tri in trigraphs)
+    # filter out all non-letter characters
+    letter = (chr(c) for c in upper_ords if c in rangeAZ)
+    # use codec_block
+    return codec_block(n, e, letter, 3, 4)
+
+def decode_block(n: int, d: int, block: str) -> str:
+    return codec_block(n, d, block, 4, 3)
+
+def codec_block(n: int, k: int, block: str, ingraph_len, outgraph_len) -> str:
+    # split block into letter codes
+    letter_codes = ((ord(c) - ordA) for c in block)
+    # convert to ingraphs
+    ingraphs = splitModIndex(tuple(letter_codes), ingraph_len)
+    # convert to ingraph codes
+    ingraph_codes = (polysubs(ingraph, lenAZ) for ingraph in ingraphs)
     if (DEBUG_MODE):
         # make a tuple, so it can be reused
-        trigraph_codes = tuple(trigraph_codes)
-        print({'trigraphs': trigraph_codes})
+        ingraph_codes = tuple(ingraph_codes)
+        print({'ingraphs': ingraph_codes})
 
-    ciphertexts = (codec_multigraph(n, e, trigraph) for trigraph in trigraph_codes)
+    ciphertexts = (codec_multigraph(n, k, ingraph) for ingraph in ingraph_codes)
     if (DEBUG_MODE):
         # make a tuple, so it can be reused
         ciphertexts = tuple(ciphertexts)
         print({'ciphertexts': ciphertexts})
 
-    quadragraphs = (polyunsubs(ciph, lenAZ, 4) for ciph in ciphertexts)
-    quadragraph_chrs = ((chr(letter + ordA) for letter in quadragraph) for quadragraph in quadragraphs)
+    outgraphs = (polyunsubs(ciph, lenAZ, outgraph_len) for ciph in ciphertexts)
+    outgraph_chrs = ((chr(letter + ordA) for letter in outgraph) for outgraph in outgraphs)
 
-    return quadragraph_chrs
+    return outgraph_chrs
 
-def decode_block(n: int, d: int, block: str):
-    # split block into letter codes
-    letter_codes = ((ord(c) - ordA) for c in block)
-    # group into quads
-    quadragraphs = splitModIndex(tuple(letter_codes), 4)
-    # convert to quadgraph codes
-    quadragraph_codes = (polysubs(quad, lenAZ) for quad in quadragraphs)
-    plaintexts = (codec_multigraph(n, d, quadragraph) for quadragraph in quadragraph_codes)
+def codec_multigraph(n: int, k: int, multigraph: int) -> int:
     if (DEBUG_MODE):
-        # make a tuple, so it can be reused
-        plaintexts = tuple(plaintexts)
-        print({'plaintexts': tuple(plaintexts)})
-
-def codec_multigraph(n, e, multigraph):
-    if (DEBUG_MODE):
-        print({'n': n, 'e': e})
+        print({'n': n, 'k': k})
     # initialize quotient, dividend, [multigraph^KEY mod Modulus]
-    Q = e
+    Q = k
     dividend = multigraph
     ciphertext = 1
     # table for multigraph^Q mod Modulus
     # index is current LSbit of public key
     pow_multi_Q = [1, None]
     # calculate multigraph^Q mod Modulus
-    for k in range(N_CODEC_ROUNDS):
+    for L in range(N_CODEC_ROUNDS):
         # quotient mod 2, or bit #0 of Q
         Q0 = (Q & 1)
         # multigraph^Q mod Modulus
@@ -142,13 +151,13 @@ def selectKey():
 
     return (n, e, d)
 
-def gen_coprimes(arr, ref):
+def gen_coprimes(arr, ref: int) -> int:
     # yield each integer, k, in vector, arr, s.t. (1 == GCD(ref, k))
     for k in arr:
         if (1 == gcd(ref, k)):
             yield k
 
-def gen_private_key_summand(PHI_n, e):
+def gen_private_key_summand(PHI_n: int, e: int) -> int:
     # reference original PHI_n
     ref_PHI_n = PHI_n
     # no division by 0 yet
