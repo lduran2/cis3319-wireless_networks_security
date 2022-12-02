@@ -3,7 +3,7 @@ from math import gcd
 from collections import deque
 from itertools import chain
 
-DEBUG_MODE = True
+DEBUG_MODE = False
 DEBUG_MODE_CODEC_GRAPH = False
 SEED_RANDOM = True
 if (SEED_RANDOM):
@@ -32,9 +32,13 @@ lenAZ = len(rangeAZ)
 N_CODEC_ROUNDS = 18
 
 def main():
+    msg = 'please help me now!'
+    print({'original message': msg})
     n, e, d = selectKey()
-    ciphertext = encode(n, e, 'please help me now!')
-    decode(n, d, ciphertext)
+    ciphertext = encode(n, e, msg)
+    print({'ciphertext': ciphertext})
+    plaintext = decode(n, d, ciphertext)
+    print({'plaintext': plaintext})
 
 def encode(n: int, e: int, msg: str) -> str:
     if (DEBUG_MODE):
@@ -42,8 +46,6 @@ def encode(n: int, e: int, msg: str) -> str:
         print('encode:')
     quadragraphs = encode_block(n, e, msg)
     ciphertext = str.join('', chain.from_iterable(quadragraphs))
-    if (DEBUG_MODE):
-        print({'ciphertext': ciphertext})
     return ciphertext
 
 def decode(n: int, d: int, msg: str) -> str:
@@ -52,8 +54,6 @@ def decode(n: int, d: int, msg: str) -> str:
         print('decode:')
     trigraphs = decode_block(n, d, msg)
     plaintext = str.join('', chain.from_iterable(trigraphs))
-    if (DEBUG_MODE):
-        print({'plaintext': plaintext})
     return plaintext
 
 def encode_block(n: int, e: int, block: str) -> str:
