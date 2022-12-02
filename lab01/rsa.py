@@ -188,6 +188,12 @@ def gen_private_key_summand(PHI_n: int, e: int) -> int:
         # update the totient and public key
         PHI_n, e = (e, r)
 
+def str2ords(string):
+    return (ord(c) for c in string)
+
+def ords2str(ords):
+    return str.join('', (chr(o) for o in ords))
+
 def splitModIndex(v, n):
     return (v[k:(k + n)] for k in range(0, len(v), n))
 
