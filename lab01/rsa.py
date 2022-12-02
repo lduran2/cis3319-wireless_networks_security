@@ -189,7 +189,7 @@ def gen_private_key_summand(PHI_n: int, e: int) -> int:
         PHI_n, e = (e, r)
 
 def splitModIndex(v, n):
-    return zip(*(v[k::n] for k in range(n)))
+    return (v[k:(k + n)] for k in range(0, len(v), n))
 
 def polysubs(v, s):
     '''
