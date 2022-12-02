@@ -144,8 +144,12 @@ def gen_private_key_summand(PHI_n, e):
             # flag division by 0 if unsuccessful
             div0 = True
             continue
+        # slice T-values
+        v = (T[k] for k in range(2))
+        # T coefficients
+        m = (-q, 1)
         # calculate and enqueue new T
-        T.appendleft(T[1] - (T[0]*q))
+        T.appendleft(vdot(v, m))
         # calculate and yield the summand
         summand = (divmod(T[0], ref_PHI_n)[1] if (1==r) else 0)
         yield summand
@@ -165,8 +169,13 @@ def polysubs(v, s):
     @param v = a vector of coefficients in descending order
     @param s = the value to substitute for s
     '''
-    n = len(v)
-    return sum(v[k]*(s**(n - k - 1)) for k in range(n))
+    return vdot(v, ((s**k) for k in reversed(range(len(v))) ))
+
+def vdot(v, u):
+    '''
+    Multiplies vectors, v, and u.
+    '''
+    return sum((z[0]*z[1]) for z in zip(v, u))
 
 def polyunsubs(total, s, min_coefs=0):
     '''
