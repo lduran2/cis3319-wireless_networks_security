@@ -2,6 +2,7 @@ import random
 from math import gcd
 from collections import deque
 from itertools import chain
+import to_alpha
 
 DEBUG_MODE = False
 DEBUG_MODE_CODEC_GRAPH = False
@@ -28,48 +29,73 @@ ordZ = ord('Z')
 rangeAZ = range(ordA, (ordZ + 1))
 lenAZ = len(rangeAZ)
 
+# size of input multigraphs
+ingraph_len = 3
+# number of input multigraphs in each block
+block_size = 5
+# size of output multigraphs
+outgraph_len = 4
+
+# prepadding sequence, ZQKGZ, or character# 256
+PAD_PREFIX = (90, 81, 75, 71, 90)
+# the ending of the padding to complete block size
+PAD_ENDING = tuple(range(ordA, (ordA + (block_size*ingraph_len))))
+
 # number of rounds used for encoding
 N_CODEC_ROUNDS = 18
 
 def main():
-    msg = 'please help me now!'
-    print({'original message': msg})
-    n, e, d = selectKey()
-    ciphertext = encode(n, e, msg)
-    print({'ciphertext': ciphertext})
-    plaintext = decode(n, d, ciphertext)
-    print({'plaintext': plaintext})
+    msg = ''
+    while (msg != 'exit()'):
+        msg = input('rsa> ')
+        print({'original message': msg})
+        n, e, d = selectKey()
+        ciphertext = encode(n, e, msg)
+        print({'ciphertext': ciphertext})
+        plaintext = decode(n, d, ciphertext)
+        print({'plaintext': plaintext})
 
 def encode(n: int, e: int, msg: str) -> str:
     if (DEBUG_MODE):
         print()
         print('encode:')
-    quadragraphs = encode_block(n, e, msg)
-    ciphertext = str.join('', chain.from_iterable(quadragraphs))
+    # convert the mesage to ordinals
+    msg_ords = str2ords(msg)
+    # encode the message to alphabetic
+    alpha_msg = tuple(to_alpha.ords2alpha(msg_ords))
+    # pad the message as necessary
+    pad_alpha_msg = pad_block_msg(alpha_msg)
+    if (DEBUG_MODE):
+        print({'padded message in alpha': ords2str(pad_alpha_msg), 'len': len(pad_alpha_msg)})
+    # split message into blocks
+    msg_blocks = splitModIndex(pad_alpha_msg, (block_size*ingraph_len))
+    # stores incoming output multigraphs
+    outgraphs = []
+    for msg_block in msg_blocks:
+        # accumulate the output
+        outgraphs.extend(encode_block(n, e, msg_block))
+    # join the output into a string and return it
+    ciphertext = str.join('', chain.from_iterable(outgraphs))
     return ciphertext
 
 def decode(n: int, d: int, msg: str) -> str:
     if (DEBUG_MODE):
         print()
         print('decode:')
-    trigraphs = decode_block(n, d, msg)
+    ords = str2ords(msg)
+    trigraphs = decode_block(n, d, ords)
     plaintext = str.join('', chain.from_iterable(trigraphs))
     return plaintext
 
 def encode_block(n: int, e: int, block: str) -> str:
-    # convert to upper case ASCII values
-    upper_ords = ((ord(c) & ~ord_shift) for c in block)
-    # filter out all non-letter characters
-    letter = (chr(c) for c in upper_ords if c in rangeAZ)
-    # use codec_block
-    return codec_block(n, e, letter, 3, 4)
+    return codec_block(n, e, block, 3, 4)
 
 def decode_block(n: int, d: int, block: str) -> str:
     return codec_block(n, d, block, 4, 3)
 
 def codec_block(n: int, k: int, block: str, ingraph_len, outgraph_len) -> str:
     # split block into letter codes
-    letter_codes = ((ord(c) - ordA) for c in block)
+    letter_codes = ((c - ordA) for c in block)
     # convert to ingraphs
     ingraphs = splitModIndex(tuple(letter_codes), ingraph_len)
     # convert to ingraph codes
@@ -150,6 +176,31 @@ def selectKey():
         )
 
     return (n, e, d)
+
+def pad_block_msg(block_msg):
+    # to pad the message, we add the sequence ZQKGZ for
+    # "character# 256" to mark the end of the string
+    # Since Latin-1 extended ASCII has 256 characters, this frees
+    # characters# [256..(25^2)[.
+    # After ZQKGZ as many letters are added until 'O', letter# 15.
+
+    # get the length of message, and its modulus
+    msg_len = len(block_msg)
+    _, r = divmod(msg_len, (block_size*ingraph_len))
+    # if already 0, then no need to pad
+    if (0==r):
+        return block_msg
+
+    # add the sequence to mark the end of the string
+    padded = (block_msg + PAD_PREFIX)
+
+    # update the modulus
+    msg_len = len(padded)
+    _, r = divmod(msg_len, (block_size*ingraph_len))
+    # add the padding endding
+    padded = (padded + PAD_ENDING[r:])
+
+    return padded
 
 def gen_coprimes(arr, ref: int) -> int:
     # yield each integer, k, in vector, arr, s.t. (1 == GCD(ref, k))
