@@ -29,7 +29,7 @@ rangeAZ = range(ordA, (ordZ + 1))
 lenAZ = len(rangeAZ)
 
 # number of rounds used for encoding
-N_ENCODE_ROUNDS = 18
+N_CODEC_ROUNDS = 18
 
 def main():
     n, e, d = selectKey()
@@ -57,7 +57,7 @@ def encode_block(n: int, e: int, block: str) -> str:
         trigraph_codes = tuple(trigraph_codes)
         print({'trigraphs': trigraph_codes})
 
-    ciphertexts = (encode_trigraph(n, e, trigraph) for trigraph in trigraph_codes)
+    ciphertexts = (codec_multigraph(n, e, trigraph) for trigraph in trigraph_codes)
     if (DEBUG_MODE):
         # make a tuple, so it can be reused
         ciphertexts = tuple(ciphertexts)
@@ -75,35 +75,35 @@ def decode_block(n: int, d: int, block: str):
     quadragraphs = splitModIndex(tuple(letter_codes), 4)
     # convert to quadgraph codes
     quadragraph_codes = (polysubs(quad, lenAZ) for quad in quadragraphs)
-    plaintexts = (encode_trigraph(n, d, quadragraph) for quadragraph in quadragraph_codes)
+    plaintexts = (codec_multigraph(n, d, quadragraph) for quadragraph in quadragraph_codes)
     if (DEBUG_MODE):
         # make a tuple, so it can be reused
         plaintexts = tuple(plaintexts)
         print({'plaintexts': tuple(plaintexts)})
 
-def encode_trigraph(n, e, trigraph):
+def codec_multigraph(n, e, multigraph):
     if (DEBUG_MODE):
         print({'n': n, 'e': e})
-    # initialize quotient, dividend, [trigraph^KEY mod Modulus]
+    # initialize quotient, dividend, [multigraph^KEY mod Modulus]
     Q = e
-    dividend = trigraph
+    dividend = multigraph
     ciphertext = 1
-    # table for trigraph^Q mod Modulus
+    # table for multigraph^Q mod Modulus
     # index is current LSbit of public key
-    pow_tri_Q = [1, None]
-    # calculate trigraph^Q mod Modulus
-    for k in range(N_ENCODE_ROUNDS):
+    pow_multi_Q = [1, None]
+    # calculate multigraph^Q mod Modulus
+    for k in range(N_CODEC_ROUNDS):
         # quotient mod 2, or bit #0 of Q
         Q0 = (Q & 1)
-        # trigraph^Q mod Modulus
-        _, pow_tri_Q[1] = divmod(dividend, n)
-        # the ciphertext = (trigraph^KEY mod Modulus)
-        _, ciphertext = divmod((ciphertext * pow_tri_Q[Q0]), n)
+        # multigraph^Q mod Modulus
+        _, pow_multi_Q[1] = divmod(dividend, n)
+        # the ciphertext = (multigraph^KEY mod Modulus)
+        _, ciphertext = divmod((ciphertext * pow_multi_Q[Q0]), n)
         # update quotient, dividend
         Q = (Q >> 1)
-        dividend = (pow_tri_Q[1]*pow_tri_Q[1])
+        dividend = (pow_multi_Q[1]*pow_multi_Q[1])
         if (DEBUG_MODE_CODEC_GRAPH):
-            print({'Q': Q, 'pow_tri_Q': pow_tri_Q, 'ciphertext': ciphertext})
+            print({'Q': Q, 'pow_multi_Q': pow_multi_Q, 'ciphertext': ciphertext})
     return ciphertext
 
 def selectKey():
