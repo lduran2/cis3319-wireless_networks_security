@@ -19,6 +19,7 @@ An intentional sequence of ZQ in the source will be marked up as
 ZQDPDGZ.
 '''
 
+DEBUG_MODE = False
 
 # ASCII range of alphabetic characters
 ordA = ord('A')
@@ -34,9 +35,11 @@ ordG = ord('G')
 ordP = ord('P')
 
 def ords2alpha(ords):
-    prev_alpha = True
+    # flags that previous character was Z
     prevZ = False
+    # flags that currently in escape mode (c.f. alphabetic mode)
     escape_mode = False
+
     for o in ords:
         # if in range A-Z, send the value as is
         if (o in rangeAZ):
@@ -47,7 +50,9 @@ def ords2alpha(ords):
                 escape_mode = False
             # if the previous, current character are 'ZQ',
             # then send the escape sequence, ZQDPDGZ
-            if (('Q'==o) and prevZ):
+            if (DEBUG_MODE):
+                print({'prevZ before': prevZ})
+            if ((ordQ==o) and prevZ):
                 yield ordQ
                 yield ordD
                 yield ordP
@@ -56,10 +61,12 @@ def ords2alpha(ords):
                 yield ordZ
                 prevZ = False
                 continue
-            # end if (('Q'==o) and prevZ)
+            # end if ((ordQ==o) and prevZ)
             # for any other letter return the value as is
             yield o
-            prevZ = ('Z'==o)
+            prevZ = (ordZ==o)
+            if (DEBUG_MODE):
+                print({'prevZ after': prevZ})
         # end if (o in rangeAZ)
         else:
             # check not previously in escape mode, send 'ZQ'
@@ -69,7 +76,8 @@ def ords2alpha(ords):
                 escape_mode = True
             # compute the sequence for this character
             seq = divmod(o, (lenAZ - 1))
-            print(seq)
+            if (DEBUG_MODE):
+                print({'seq': prevZ})
             for L in seq:
                 # send that each letter in sequence, framed in A-Z
                 yield (L + ordA)
@@ -78,3 +86,57 @@ def ords2alpha(ords):
     if (escape_mode):
         yield ordZ
 # end def ords2alpha(ords)
+
+def alpha2ords(alpha):
+    # flags that previous character was Z
+    prevZ = False
+    # flags that currently in escape mode (c.f. alphabetic mode)
+    escape_mode = False
+    # index within codes in escape mode
+    i_code = 0
+    # the accumulated ordinal code so far
+    code_acc = 0
+    for a in alpha:
+        if (escape_mode):
+            # if current character is Z, then exit escape mode
+            if (ordZ==a):
+                escape_mode = False
+                continue
+            # 0-index the alpha so 'A'=0
+            a -= ordA
+            if (1==i_code):
+                # shift the previous code
+                code_acc *= (lenAZ - 1)
+                # add the current code
+                code_acc += a
+                yield code_acc
+                # next character is odd
+                i_code = 0
+                continue
+            # set accumulator to current character
+            code_acc = a
+            # next character is even
+            i_code += 1
+        else:
+        # if in alphabetic mode
+            # if previous character was Z
+            if (prevZ):
+                # if current character is Q
+                if (ordQ==a):
+                    prevZ = False
+                    # go into escape mode
+                    escape_mode = True
+                    continue
+                # otherwise, send both
+                else:
+                    yield ordZ
+            # unless previous Z, hold if the current character is Z
+            elif (ordZ==a):
+                prevZ = True
+                continue
+            # send as is
+            yield a
+            prevZ = False
+    # if there is a Z to send, send it
+    if (prevZ):
+        yield ordZ
