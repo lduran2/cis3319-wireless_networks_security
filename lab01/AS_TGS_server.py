@@ -7,9 +7,11 @@ from os import urandom
 
 # local library crypto
 import run_node
-from run_node import servers_config_data, nodes_config_data, config, KEY_CHARSET
+from run_node import servers_config_data, nodes_config_data, config, KEY_CHARSET, PKca
 from crypto import KeyManager, DES
+import rsa
 from node import Node
+from client import Client
 from server import Server
 from ticket import receive_ticket
 
@@ -24,8 +26,10 @@ ID = "CIS3319TGSID"
 
 # corresponding section in configuration file
 SECTION = 'AS_TGS_server'
-# load server data
-SERVER = servers_config_data[SECTION]
+# load this server's data
+ASTGS = servers_config_data[SECTION]
+# load the certification authority's data
+CAUTH = servers_config_data['CertificateAuthority']
 # load node data
 NODE = nodes_config_data[SECTION]
 
@@ -37,7 +41,8 @@ Lifetimes = { 2: 60.0, 4: 86400.0 } # [s]
 
 
 def serveApplication(client_data, cauth_data, atgs_data):
-    pass
+    requestCertificate(client_data, cauth_data, atgs_data)
+    respondKerberos(client_data, atgs_data)
 
 
 def requestCertificate(client_data, cauth_data, atgs_data):
@@ -52,14 +57,18 @@ def requestCertificate(client_data, cauth_data, atgs_data):
 
 
 def register_with_certificate_authority(client):
-    # (1Tx) S -> CA: RSA[PK_ca][K_tmpl||ID_s||TS1]
+    # (1Tx) S -> CA: RSA[PKca][K_tmpl||ID_s||TS1]
     # create temporary key
-    K_tmpl = KeyManager().generate_key()
+    K_tmpl_byts = KeyManager().generate_key()
+    K_tmpl_str = K_tmpl_byts.decode(KEY_CHARSET)
     # get a time stamp
     TS1 = time.time()
     # create the registration
-    cert_registration = f'{K_tmpl}||{ID}||{TS1}'
-    # encode 
+    plain_cert_registration = f'{K_tmpl_str}||{ID}||{TS1}'
+    # encode the registration
+    cipher_cert_registration = rsa.encode(*PKca, plain_cert_registration)
+    print(f'(a1) AS encrypted {cipher_cert_registration}')
+    print(f'(a1) AS generated {K_tmpl_byts}')
 
 
 def respondKerberos(node_data, server_data):
@@ -175,6 +184,6 @@ def create_ticket(server, des_next_server, ID_c, AD_c, server_ID, fail_timestamp
 
 # run the server until SENTINEL is given
 if __name__ == '__main__':
-    respondKerberos(NODE, SERVER)
+    serveApplication(NODE, CAUTH, ASTGS)
 # end if __name__ == '__main__'
 

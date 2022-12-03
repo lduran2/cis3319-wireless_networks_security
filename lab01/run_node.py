@@ -6,6 +6,7 @@ import traceback
 from sys import stderr
 from _thread import start_new_thread
 from collections import namedtuple
+import csv
 
 
 # local library crypto
@@ -44,6 +45,13 @@ ENC_FILE, MAC_FILE = (
     config['node'][key] for key in ('enc_key_file', 'mac_key_file'))
 # load string that ends the input stream
 SENTINEL = config['node']['sentinel']
+
+# named tuple to store public key data
+PublicKey = namedtuple('PublicKey', tuple('ne'))
+# get the certificate authority public key
+with open('PKca.txt', newline='') as csvfile:
+    inr = csv.reader(csvfile, delimiter=',')
+    PKca = PublicKey(*(int(k) for k in tuple(inr)[0]))
 
 # Python uses Latin-1 for Pickles, so it's good enough to encode keys
 KEY_CHARSET = 'Latin-1'
