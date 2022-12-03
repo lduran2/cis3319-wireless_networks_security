@@ -6,6 +6,8 @@ import traceback
 from sys import stderr
 from _thread import start_new_thread
 from collections import namedtuple
+import rsa
+import csv
 
 
 # local library crypto
@@ -17,7 +19,7 @@ from hmac import SimpleHmacEncoder, UnexpectedMac
 config = json.load(open('config.json', 'r'))
 
 # the keys for server configurations
-SERVERS_CONFIG_DATA_KEYS = 'V_server, AS_TGS_server'.split(', ')
+SERVERS_CONFIG_DATA_KEYS = 'V_server, AS_TGS_server, CertificateAuthority'.split(', ')
 SERVER_DATA_KEYS = 'addr,port,charset'.split(',')
 # named tuple to store server configuration
 ServerData = namedtuple('ServerData', SERVER_DATA_KEYS)
@@ -27,7 +29,7 @@ servers_config_data = {
         for server in SERVERS_CONFIG_DATA_KEYS }
 
 # the keys for ode configurations
-NODE_CONFIG_DATA_KEYS = 'V_server, AS_TGS_server, C_client'.split(', ')
+NODE_CONFIG_DATA_KEYS = (SERVERS_CONFIG_DATA_KEYS + 'C_client'.split(', '))
 NODE_DATA_KEYS = 'prompt, connecting_status'.split(', ')
 # named tuple to store node configuration
 NodeData = namedtuple('NodeData', NODE_DATA_KEYS)
@@ -40,10 +42,16 @@ nodes_config_data = {
 # ENC_FILE holds the default key for DES used in main
 #   However, the Kerberos generates its own shared key.
 # MAC_FILE holds the key for SHA256 used in hashing the MAC authentication.
-ENC_FILE, MAC_FILE = (
-    config['node'][key] for key in ('enc_key_file', 'mac_key_file'))
+ENC_FILE, MAC_FILE, CA_FILE = (
+    config['node'][key] for key in 'enc_key_file, mac_key_file, ca_key_file'.split(', '))
 # load string that ends the input stream
 SENTINEL = config['node']['sentinel']
+
+# get the certificate authority public key
+with open(CA_FILE, newline='') as csvfile:
+    inr = csv.reader(csvfile, delimiter=',')
+    ca_key = rsa.ints(tuple(inr)[0])
+PKca, SKca = rsa.split_key_pair(ca_key)
 
 # Python uses Latin-1 for Pickles, so it's good enough to encode keys
 KEY_CHARSET = 'Latin-1'

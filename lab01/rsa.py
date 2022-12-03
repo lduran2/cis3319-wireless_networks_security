@@ -3,10 +3,11 @@ from math import gcd
 from collections import deque
 from itertools import chain
 import to_alpha
+from collections import namedtuple
 
 DEBUG_MODE = False
 DEBUG_MODE_CODEC_GRAPH = False
-SEED_RANDOM = True
+SEED_RANDOM = False
 if (SEED_RANDOM):
     random.seed(42)
 
@@ -48,6 +49,7 @@ def main():
     # select the key
     n, e, d = selectKey()
     msg = ''
+    # REPL loop until exit() given
     while True:
         msg = input('rsa> ')
         if ('exit()'==msg):
@@ -85,7 +87,7 @@ def encode(n: int, e: int, msg: str) -> str:
         # accumulate the output
         outgraphs_acc.extend(outgraph_chrs)
     # join the output into a string and return it
-    ciphertext = str.join('', outgraphs_acc)
+    ciphertext = ''.join(outgraphs_acc)
     return ciphertext
 
 def decode(n: int, d: int, msg: str) -> str:
@@ -270,7 +272,7 @@ def str2ords(string):
     return (ord(c) for c in string)
 
 def ords2str(ords):
-    return str.join('', (chr(o) for o in ords))
+    return ''.join(chr(o) for o in ords)
 
 def splitModIndex(v, n):
     return (v[k:(k + n)] for k in range(0, len(v), n))
@@ -334,4 +336,24 @@ def tupleindex(a_tuple, subtuple):
             return k
     raise ValueError('subtuple not found')
 
-main()
+# named tuple to store public key data
+RsaKey = namedtuple('RsaKey', tuple('nk'))
+
+# functions used to convert between strings, keys
+def str2key(string):
+    return RsaKey(*ints(string.split(',')))
+
+def ints(strs):
+    return tuple(int(k) for k in strs)
+
+def split_key_pair(pair):
+    return (RsaKey(*pair[:2]), RsaKey(*pair[::2]))
+
+def key2str(rsaKey):
+    return (','.join(str(f) for f in rsaKey))
+
+# run the REPL test
+if __name__ == '__main__':
+    main()
+# end if __name__ == '__main__'
+
