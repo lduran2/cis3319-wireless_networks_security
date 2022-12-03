@@ -69,7 +69,7 @@ def requestSessionKey(client):
     # communication
     request_server_public_key_certificate(client)
     PKs, Cert_s = send_public_key_certificate(client)
-    send_registration_information(Cert_s, PKs)
+    send_registration_information(client, Cert_s, PKs)
 
 
 def request_server_public_key_certificate(client):
@@ -93,12 +93,33 @@ def send_public_key_certificate(client):
     PKs_str, Cert_s, TS4 = msg.split('||')
     # parse keys
     PKs = rsa.str2key(PKs_str)
-    return PKs, Cert_s
+    return (PKs, Cert_s)
 
 
-def send_registration_information(Cert_s, PKs):
+def send_registration_information(client, Cert_s, PKs):
     # (5Tx): C -> S:    RSA[PKs][K_tmp2||ID_c||IP_c||Port_c||TS5]
-    #       Cert_s = Sign[SKca][ID_s||ID_ca||PKs]
+    validate_certificate(Cert_s, PKs)
+    # create temporary key
+    K_tmp2_byts = KeyManager().generate_key()
+    K_tmp2_str = K_tmp2_byts.decode(KEY_CHARSET)
+    # create its DES object
+    DES_tmp2 = DES(K_tmp2_byts)
+    # get a time stamp
+    TS5 = time.time()
+    # create the registration information
+    plain_registration_info = f'{K_tmp2_str}||{ID_pki}||{client.node.addr}||{client.node.port}||{TS5}'
+    # encode the registration inormation using PKs
+    cipher_registration_info = rsa.encode(*PKs, plain_registration_info)
+    print(f'(b5) C sending: {plain_registration_info}')
+    print(f'(b5) C encoded: {cipher_registration_info}')
+    print(f'(b5) C generated: {K_tmp2_byts}')
+    # encode and send the message
+    client.send(cipher_registration_info.encode(KEY_CHARSET))
+    return DES_tmp2
+
+
+def validate_certificate(Cert_s, PKs):
+    # note: Cert_s = Sign[SKca][ID_s||ID_ca||PKs]
     # verify the PKs and Cert_s
     # first decode Cert_s
     plain_Cert_s = rsa.decode(*PKca, Cert_s)
@@ -113,6 +134,7 @@ def send_registration_information(Cert_s, PKs):
     PKs_rx = rsa.str2key(PKs_rx_str)
     if (PKs_rx != PKs):
         raise IncorrectPublicKey(f'expected: {PKs};  server {ID_s} gave: {PKs_rx}')
+
 
 
 class IncorrectServerIdentity(Exception):

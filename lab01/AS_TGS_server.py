@@ -63,7 +63,7 @@ def requestCertificate(client_data, cauth_data, atgs_data):
         # (a) application server registration to obtain its public/private
         # key pair and certificate
         DES_tmpl = register_with_certificate_authority(caClient)
-        PKs, Cert_s = receive_certificate(caClient, DES_tmpl)
+        PKs, SKs, Cert_s = receive_certificate(caClient, DES_tmpl)
     finally:
         # close the node
         caClient.close()
@@ -78,6 +78,7 @@ def requestCertificate(client_data, cauth_data, atgs_data):
         # communication
         receive_public_key_certificate_request(atgsServer)
         send_public_key_certificate(atgsServer, PKs, Cert_s)
+        receive_registration_information(atgsServer, SKs)
     finally:
         # close the node
         atgsServer.close()
@@ -119,7 +120,7 @@ def receive_certificate(client, DES_tmpl):
     SKs = rsa.str2key(SKs_str)
     print(''.join((f'(a2) S found keys: ', str({'PKs': PKs, 'SKs': SKs}))))
     print(f'(a2) S found certificate: {Cert_s_cipher}')
-    return PKs, Cert_s_cipher
+    return (PKs, SKs, Cert_s_cipher)
 
 
 def receive_public_key_certificate_request(server):
@@ -141,6 +142,22 @@ def send_public_key_certificate(server, PKs, Cert_s):
     # encode and send the message
     server.send(plain_key_cert.encode(KEY_CHARSET))
 
+
+def receive_registration_information(server, SKs):
+    # (5Tx): C -> S:    RSA[PKs][K_tmp2||ID_c||IP_c||Port_c||TS5]
+    # receive the message
+    cipher_msg = run_node.recv_blocking(server).decode(KEY_CHARSET)
+    print(f'(b5) S Received: {cipher_msg}')
+    # decode the registration
+    plain_msg = rsa.decode(*SKs, cipher_msg)
+    # split it into its fields
+    K_tmp2_str, ID_c, IP_c, Port_c, TS5 = plain_msg.split('||')
+    # encode the key, and create its DES object
+    K_tmp2_byts = K_tmp2_str.encode(KEY_CHARSET)
+    DES_tmp2 = DES(K_tmp2_byts)
+    print(f'(a1) S found key: {K_tmp2_byts}')
+    print()
+    return (DES_tmp2, ID_c)
 
 
 #######################################################################
