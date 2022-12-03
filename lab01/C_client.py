@@ -40,7 +40,7 @@ def requestServers(client_data, cauth_data, atgs_data, v_server_data):
     logging.info(f'{client_data.connecting_status} {AD_c_tsg} . . .')
     atgsClient = Client(atgs_data.addr, atgs_data.port)
 
-    requestSessionKey(atgsClient)
+    requestClientRegistrationService(atgsClient)
 
     return
 
@@ -64,12 +64,13 @@ def requestServers(client_data, cauth_data, atgs_data, v_server_data):
 # PKI-based authentication
 #######################################################################
 
-def requestSessionKey(client):
+def requestClientRegistrationService(client):
     # (b) client registration: to obtain session key for further
     # communication
     request_server_public_key_certificate(client)
     PKs, Cert_s = send_public_key_certificate(client)
-    send_registration_information(client, Cert_s, PKs)
+    DES_tmp2 = send_registration_information(client, Cert_s, PKs)
+    DES_sess = receive_session_key(client, DES_tmp2)
 
 
 def request_server_public_key_certificate(client):
@@ -113,6 +114,7 @@ def send_registration_information(client, Cert_s, PKs):
     print(f'(b5) C sending: {plain_registration_info}')
     print(f'(b5) C encoded: {cipher_registration_info}')
     print(f'(b5) C generated: {K_tmp2_byts}')
+    print()
     # encode and send the message
     client.send(cipher_registration_info.encode(KEY_CHARSET))
     return DES_tmp2
@@ -123,8 +125,6 @@ def validate_certificate(Cert_s, PKs):
     # verify the PKs and Cert_s
     # first decode Cert_s
     plain_Cert_s = rsa.decode(*PKca, Cert_s)
-    print(Cert_s)
-    print(plain_Cert_s)
     # split the certificate
     ID_s_rx, ID_ca, PKs_rx_str = plain_Cert_s.split('||')
     # compare the 2 ID_s values
@@ -135,6 +135,22 @@ def validate_certificate(Cert_s, PKs):
     if (PKs_rx != PKs):
         raise IncorrectPublicKey(f'expected: {PKs};  server {ID_s} gave: {PKs_rx}')
 
+
+def receive_session_key(client, DES_tmp2):
+    # (6Tx) S -> C:     DES[K_tmp2][K_sess||Lifetime_sess||ID_c||TS6]
+    # receive the message
+    cipher_msg = run_node.recv_blocking(client)
+    print(f'(b6) C Received: {cipher_msg}')
+    # decrypt the registration
+    plain_msg = DES_tmp2.decrypt(cipher_msg)
+    # split it into its fields
+    K_sess_str, Lifetime_sess, IP_c, TS6 = plain_msg.split('||')
+    # encode the key, and create its DES object
+    K_sess_byts = K_sess_str.encode(KEY_CHARSET)
+    DES_sess = DES(K_sess_byts)
+    print(f'(b6) S found key: {K_sess_byts}')
+    print()
+    return DES_sess
 
 
 class IncorrectServerIdentity(Exception):

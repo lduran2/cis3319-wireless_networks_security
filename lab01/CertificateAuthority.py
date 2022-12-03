@@ -30,6 +30,7 @@ NODE = nodes_config_data[SECTION]
 
 
 def receiveThread(server):
+    old_tb = None
     exit_instruction = f'Type "{SENTINEL}" to exit: '
     print(end=exit_instruction, flush=True)
     try:
@@ -53,6 +54,7 @@ def receiveThread(server):
             print(file=stderr)
             logging.error(tb)
         old_tb = tb
+        print(end=exit_instruction, flush=True)
     finally:
         # close the node
         server.close()

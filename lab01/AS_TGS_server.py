@@ -39,8 +39,13 @@ NODE = nodes_config_data[SECTION]
 # size for DES keys
 DES_KEY_SIZE = 8
 
+# named keys for Lifetimes
+SESS = 'SESS'
 # the lifetimes of tickets
-Lifetimes = { 2: 60.0, 4: 86400.0 } # [s]
+Lifetimes = {
+    2: 60.0, 4: 86400.0,
+    SESS: 86400.0
+} # [in seconds]
 
 
 def serveApplication(client_data, cauth_data, atgs_data):
@@ -78,7 +83,8 @@ def requestCertificate(client_data, cauth_data, atgs_data):
         # communication
         receive_public_key_certificate_request(atgsServer)
         send_public_key_certificate(atgsServer, PKs, Cert_s)
-        receive_registration_information(atgsServer, SKs)
+        DES_tmp2, ID_c = receive_registration_information(atgsServer, SKs)
+        DES_sess = send_session_key(atgsServer, DES_tmp2, ID_c)
     finally:
         # close the node
         atgsServer.close()
@@ -97,8 +103,8 @@ def register_with_certificate_authority(client):
     plain_cert_registration = f'{K_tmpl_str}||{ID_pki}||{TS1}'
     # encode the registration
     cipher_cert_registration = rsa.encode(*PKca, plain_cert_registration)
-    print(f'(a1) AS encoded: {cipher_cert_registration}')
-    print(f'(a1) AS generated: {K_tmpl_byts}')
+    print(f'(a1) S encoded: {cipher_cert_registration}')
+    print(f'(a1) S generated: {K_tmpl_byts}')
     print()
     # encode and send the message
     client.send(cipher_cert_registration.encode(KEY_CHARSET))
@@ -120,6 +126,7 @@ def receive_certificate(client, DES_tmpl):
     SKs = rsa.str2key(SKs_str)
     print(''.join((f'(a2) S found keys: ', str({'PKs': PKs, 'SKs': SKs}))))
     print(f'(a2) S found certificate: {Cert_s_cipher}')
+    print()
     return (PKs, SKs, Cert_s_cipher)
 
 
@@ -144,7 +151,7 @@ def send_public_key_certificate(server, PKs, Cert_s):
 
 
 def receive_registration_information(server, SKs):
-    # (5Tx): C -> S:    RSA[PKs][K_tmp2||ID_c||IP_c||Port_c||TS5]
+    # (5Rx): C -> S:    RSA[PKs][K_tmp2||ID_c||IP_c||Port_c||TS5]
     # receive the message
     cipher_msg = run_node.recv_blocking(server).decode(KEY_CHARSET)
     print(f'(b5) S Received: {cipher_msg}')
@@ -155,9 +162,28 @@ def receive_registration_information(server, SKs):
     # encode the key, and create its DES object
     K_tmp2_byts = K_tmp2_str.encode(KEY_CHARSET)
     DES_tmp2 = DES(K_tmp2_byts)
-    print(f'(a1) S found key: {K_tmp2_byts}')
+    print(f'(b5) S found key: {K_tmp2_byts}')
     print()
     return (DES_tmp2, ID_c)
+
+
+def send_session_key(server, DES_tmp2, ID_c):
+    # (6Tx) S -> C:     DES[K_tmp2][K_sess||Lifetime_sess||ID_c||TS6]
+    # create session key
+    K_sess_byts = KeyManager().generate_key()
+    K_sess_str = K_sess_byts.decode(KEY_CHARSET)
+    # create its DES object
+    DES_sess = DES(K_sess_byts)
+    # get a time stamp
+    TS6 = time.time()
+    # seembly the session key message
+    plain_session_key_msg = f'{K_sess_str}||{Lifetimes[SESS]}||{ID_c}||{TS6}'
+    cipher_session_key_msg = DES_tmp2.encrypt(plain_session_key_msg)
+    print(f'(b6) S encrypted: {cipher_session_key_msg}')
+    print(f'(b6) S generated: {K_sess_byts}')
+    print()
+    server.send(cipher_session_key_msg)
+    return DES_sess
 
 
 #######################################################################
