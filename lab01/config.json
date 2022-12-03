@@ -2,6 +2,7 @@
     "node": {
         "enc_key_file": "enc_key.txt",
         "mac_key_file": "mac_key.txt",
+        "ca_key_file": "ca_key.txt",
         "sentinel": "exit"
     },
     "kerberos_keys": {
@@ -22,6 +23,13 @@
         "addr": "localhost",
         "port": 88,
         "charset": "utf-8"
+    },
+    "CertificateAuthority": {
+        "prompt": "CA> ",
+        "connecting_status": "listening to",
+        "addr": "localhost",
+        "port": 1813,
+        "charset": null
     },
     "C_client": {
         "prompt": "C_client> ",

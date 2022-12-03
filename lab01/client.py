@@ -1,41 +1,28 @@
 from node import Node
 
-class Server:
-    '''
-    A simple socket server.
-    '''
 
-    # the maximum number of connections
-    MAX_N_CONNS = 1
+class Client:
+    '''
+    A simple socket client.
+    '''
 
     def __init__(self, addr: str, port: int, buffer_size=1024):
         '''
-        Allocates space for the socket server and initializes it.
-        @param addr: str = address whereat to listen (without port)
-        @param port: int = port of address whereat to listen
+        Allocates space for the socket client and initializes it.
+        @param addr: str = address whereto to connect (without port)
+        @param port: int = port of address whereto to connect
         @param buffer_size: int = default buffer size for receiving
                 messages
         '''
         # create and store the node
-        self.node = Node(addr, port, Server.bindListenAccept, buffer_size)
-
-    def acceptNextConnection(self):
-        # allow for more connections
-        Server.acceptNextConnectionOnNode(self.node)
+        self.node = Node(addr, port, Client.connect, buffer_size)
 
     @staticmethod
-    def bindListenAccept(node: Node):
-        # bind it to the address whereat to listen
-        node.s.bind((node.addr, node.port))
-        # start listening
-        node.s.listen(Server.MAX_N_CONNS)
-        # accept first connection
-        Server.acceptNextConnectionOnNode(node)
-
-    @staticmethod
-    def acceptNextConnectionOnNode(node: Node):
-        # store the connected socket and update the address
-        node.conn, node.addr = node.s.accept()
+    def connect(node: Node):
+        # connect the socket to the given address and port
+        node.s.connect((node.addr, node.port))
+        # set connection to socket
+        node.conn = node.s
 
     def send(self, msg_bytes: bytes):
         '''
@@ -61,6 +48,5 @@ class Server:
         Closes the backing socket.
         '''
         self.node.close()
-# end class Server
-
+# end class Client
 
