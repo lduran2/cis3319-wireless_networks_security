@@ -12,7 +12,7 @@ from crypto import KeyManager, DES
 import rsa
 from client import Client
 from ticket import TICKET_EXPIRED
-from AS_TGS_server import ID_ker as ID_tgs, ID_pki as ID_s
+from AS_TGS_server import ID_ker as ID_tgs, ID_pki as ID_s, MEMO_REQ
 from V_server import ID as ID_v
 
 
@@ -71,6 +71,10 @@ def requestClientRegistrationService(client):
     PKs, Cert_s = send_public_key_certificate(client)
     DES_tmp2 = send_registration_information(client, Cert_s, PKs)
     DES_sess = receive_session_key(client, DES_tmp2)
+
+    # (c) service request: to obtain application data
+    request_service_data(client, DES_sess)
+    receive_service_data_request(client, DES_sess)
 
 
 def request_server_public_key_certificate(client):
@@ -137,7 +141,7 @@ def validate_certificate(Cert_s, PKs):
 
 
 def receive_session_key(client, DES_tmp2):
-    # (6Tx) S -> C:     DES[K_tmp2][K_sess||Lifetime_sess||ID_c||TS6]
+    # (6Rx) S -> C:     DES[K_tmp2][K_sess||Lifetime_sess||ID_c||TS6]
     # receive the message
     cipher_msg = run_node.recv_blocking(client)
     print(f'(b6) C Received: {cipher_msg}')
@@ -151,6 +155,32 @@ def receive_session_key(client, DES_tmp2):
     print(f'(b6) S found key: {K_sess_byts}')
     print()
     return DES_sess
+
+
+def request_service_data(client, DES_sess):
+    # (7Tx) C -> S:     DES[K_sess][req||TS7]
+    # get a time stamp
+    TS7 = time.time()
+    # assemble the session request
+    plain_request = f'{MEMO_REQ}||{TS7}'
+    cipher_request = DES_sess.encrypt(plain_request)
+    print(f'(c7) C encrypted: {cipher_request}')
+    print()
+    client.send(cipher_request)
+
+
+def receive_service_data_request(client, DES_sess):
+    # (8Rx) S -> C:     DES[K_sess][data||TS8]
+    # receive the message
+    cipher_msg = run_node.recv_blocking(client)
+    print(f'(c8) S Received: {cipher_msg}')
+    # decrypt the registration
+    plain_msg = DES_sess.decrypt(cipher_msg)
+    # split it into its fields
+    data, TS8 = plain_msg.split('||')
+    print(f'(c8) S decrypted: {data}')
+    print()
+    return data
 
 
 class IncorrectServerIdentity(Exception):

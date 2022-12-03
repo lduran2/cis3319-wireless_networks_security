@@ -27,6 +27,12 @@ ID_ker = 'CIS3319TGSID'
 # ID for this node in PKI
 ID_pki = 'ID-Server'
 
+# services provided
+MEMO_REQ = 'memo'
+
+# the service data requested
+MEMO_DATA = 'take cis3319 class this morning'
+
 # corresponding section in configuration file
 SECTION = 'AS_TGS_server'
 # load this server's data
@@ -85,6 +91,13 @@ def requestCertificate(client_data, cauth_data, atgs_data):
         send_public_key_certificate(atgsServer, PKs, Cert_s)
         DES_tmp2, ID_c = receive_registration_information(atgsServer, SKs)
         DES_sess = send_session_key(atgsServer, DES_tmp2, ID_c)
+
+        # (c) service request: to obtain application data
+        req = receive_service_data_request(atgsServer, DES_sess)
+        # if the request is incorrect, stop 
+        if (MEMO_REQ != req):
+            raise
+        send_service_data(atgsServer, DES_sess)
     finally:
         # close the node
         atgsServer.close()
@@ -144,7 +157,7 @@ def send_public_key_certificate(server, PKs, Cert_s):
     PKs_str = rsa.key2str(PKs)
     # create the message
     plain_key_cert = f'{PKs_str}||{Cert_s}||{TS4}'
-    print(f'(b3) S sending: {plain_key_cert}')
+    print(f'(b4) S sending: {plain_key_cert}')
     print()
     # encode and send the message
     server.send(plain_key_cert.encode(KEY_CHARSET))
@@ -176,7 +189,7 @@ def send_session_key(server, DES_tmp2, ID_c):
     DES_sess = DES(K_sess_byts)
     # get a time stamp
     TS6 = time.time()
-    # seembly the session key message
+    # assemble the session key message
     plain_session_key_msg = f'{K_sess_str}||{Lifetimes[SESS]}||{ID_c}||{TS6}'
     cipher_session_key_msg = DES_tmp2.encrypt(plain_session_key_msg)
     print(f'(b6) S encrypted: {cipher_session_key_msg}')
@@ -184,6 +197,38 @@ def send_session_key(server, DES_tmp2, ID_c):
     print()
     server.send(cipher_session_key_msg)
     return DES_sess
+
+
+def receive_service_data_request(server, DES_sess):
+    # (7Rx) C -> S:     DES[K_sess][req||TS7]
+    # receive the message
+    cipher_msg = run_node.recv_blocking(server)
+    print(f'(c7) S Received: {cipher_msg}')
+    # decrypt the registration
+    plain_msg = DES_sess.decrypt(cipher_msg)
+    # split it into its fields
+    req, TS7 = plain_msg.split('||')
+    print(f'(c7) S decrypted: {req}')
+    print()
+    return req
+
+
+def send_service_data(server, DES_sess):
+    # (8Tx) S -> C:     DES[K_sess][data||TS8]
+    # get a time stamp
+    TS8 = time.time()
+    # assemble the session request
+    plain_request = f'{MEMO_DATA}||{TS8}'
+    cipher_request = DES_sess.encrypt(plain_request)
+    print(f'(c8) S encrypted: {cipher_request}')
+    print()
+    server.send(cipher_request)
+
+
+class BadRequest(Exception):
+    '''
+    Thrown when a client makes an invalid request.
+    '''
 
 
 #######################################################################

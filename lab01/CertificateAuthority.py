@@ -33,9 +33,9 @@ def receiveThread(server):
     old_tb = None
     exit_instruction = f'Type "{SENTINEL}" to exit: '
     print(end=exit_instruction, flush=True)
-    try:
-        # loop indefinitely
-        while True:
+    # loop indefinitely
+    while True:
+        try:
             print()
             print()
             # (a) application server registration to obtain its public/private
@@ -46,18 +46,15 @@ def receiveThread(server):
             print(end=exit_instruction, flush=True)
             # accept next connection
             server.acceptNextConnection()
-        # end while True
-    except Exception as e:
-        tb = traceback.format_exc()
-        # don't repeat the trackback
-        if (tb != old_tb):
-            print(file=stderr)
-            logging.error(tb)
-        old_tb = tb
-        print(end=exit_instruction, flush=True)
-    finally:
-        # close the node
-        server.close()
+        except Exception as e:
+            tb = traceback.format_exc()
+            # don't repeat the trackback
+            if (tb != old_tb):
+                print(file=stderr)
+                logging.error(tb)
+            old_tb = tb
+            print(end=exit_instruction, flush=True)
+    # end while True
 
 
 def respondCertification(node_data, server_data):
@@ -78,6 +75,9 @@ def respondCertification(node_data, server_data):
         msg_string = input()
         if msg_string == SENTINEL:
             break
+
+    # close the node
+    server.close()
 
 
 def receive_certificate_registration(server):
