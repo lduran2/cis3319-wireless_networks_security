@@ -4,7 +4,7 @@ from collections import deque
 from itertools import chain
 import to_alpha
 
-DEBUG_MODE = True
+DEBUG_MODE = False
 DEBUG_MODE_CODEC_GRAPH = False
 SEED_RANDOM = True
 if (SEED_RANDOM):
@@ -107,16 +107,16 @@ def decode(n: int, d: int, msg: str) -> str:
     except ValueError as e:
         pass
     # convert from alpha to ords
-    plaintext_ords = tuple(to_alpha.alpha2ords(outgraphs))
+    plaintext_ords = (to_alpha.alpha2ords(outgraphs))
     # join the output into a string and return it
     plaintext_str = ords2str(plaintext_ords)
     return plaintext_str
 
-def codec_block(n: int, k: int, block, INGRAPH_LEN, OUTGRAPH_LEN) -> str:
+def codec_block(n: int, k: int, block, ingraph_len, outgraph_len) -> str:
     # split block into letter codes
     letter_codes = tuple((c - ordA) for c in block)
     # convert to ingraphs
-    ingraphs = splitModIndex(letter_codes, INGRAPH_LEN)
+    ingraphs = splitModIndex(letter_codes, ingraph_len)
     # convert to ingraph codes
     ingraph_codes = (polysubs(ingraph, lenAZ) for ingraph in ingraphs)
     if (DEBUG_MODE):
@@ -130,7 +130,7 @@ def codec_block(n: int, k: int, block, INGRAPH_LEN, OUTGRAPH_LEN) -> str:
         ciphertexts = tuple(ciphertexts)
         print({'ciphertexts': ciphertexts})
 
-    outgraphs = (polyunsubs(ciph, lenAZ, OUTGRAPH_LEN) for ciph in ciphertexts)
+    outgraphs = (polyunsubs(ciph, lenAZ, outgraph_len) for ciph in ciphertexts)
 
     outgraph_ords = (((letter + ordA) for letter in outgraph) for outgraph in outgraphs)
     if (DEBUG_MODE):
@@ -304,7 +304,7 @@ def polyunsubs(total, s, min_coefs=0):
     unpadded = tuple(reversed(tuple(genpolyunsubs(total, s))))
     n_pad = (min_coefs - len(unpadded))
     return ((((0,)*n_pad) + unpadded)
-        if (len(unpadded) > 0)
+        if (n_pad > 0)
         else unpadded)
 
 def genpolyunsubs(total, s):
