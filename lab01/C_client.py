@@ -7,6 +7,7 @@ from sys import stderr
 # local library crypto
 import run_node
 from run_node import servers_config_data, nodes_config_data, config, KEY_CHARSET
+from run_node import PKca
 from crypto import KeyManager, DES
 import rsa
 from client import Client
@@ -68,7 +69,7 @@ def requestSessionKey(client):
     # communication
     request_server_public_key_certificate(client)
     PKs, Cert_s = send_public_key_certificate(client)
-    send_registration_information(PKs, Cert_s)
+    send_registration_information(Cert_s, PKs)
 
 
 def request_server_public_key_certificate(client):
@@ -95,8 +96,35 @@ def send_public_key_certificate(client):
     return PKs, Cert_s
 
 
-def send_registration_information(PKs, Cert_s):
-    pass
+def send_registration_information(Cert_s, PKs):
+    # (5Tx): C -> S:    RSA[PKs][K_tmp2||ID_c||IP_c||Port_c||TS5]
+    #       Cert_s = Sign[SKca][ID_s||ID_ca||PKs]
+    # verify the PKs and Cert_s
+    # first decode Cert_s
+    plain_Cert_s = rsa.decode(*PKca, Cert_s)
+    print(Cert_s)
+    print(plain_Cert_s)
+    # split the certificate
+    ID_s_rx, ID_ca, PKs_rx_str = plain_Cert_s.split('||')
+    # compare the 2 ID_s values
+    if (ID_s_rx != ID_s):
+        raise IncorrectServerIdentity(f'expected: {ID_s};  certificate gave: {ID_s_rx}')
+    # compare the two public keys
+    PKs_rx = rsa.str2key(PKs_rx_str)
+    if (PKs_rx != PKs):
+        raise IncorrectPublicKey(f'expected: {PKs};  server {ID_s} gave: {PKs_rx}')
+
+
+class IncorrectServerIdentity(Exception):
+    '''
+    Thrown when a certificate has the incorrect server ID.
+    '''
+
+
+class IncorrectPublicKey(Exception):
+    '''
+    Thrown when a received the incorrect server ID.
+    '''
 
 
 #######################################################################
