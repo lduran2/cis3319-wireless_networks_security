@@ -1,6 +1,7 @@
 
 from copy import deepcopy
 import random
+from os import urandom
 from typing import Iterable
 
 DEBUG_MODE = False
@@ -17,7 +18,10 @@ class KeyManager:
             f.write(key)
 
     def __init__(self, seed=None):
-        self.random = random.Random(seed)
+        if (seed is None):
+            self.random = random.Random()
+        else:
+            self.random = random.Random(seed)
     
     def generate_key(self, key_len=256) -> bytes:
         """"
@@ -25,7 +29,8 @@ class KeyManager:
         return: random bytes of length (key_len // 8)
         """
         # TODO: your code here
-        rand_bytes = bytes() # just a placeholder
+        n_bytes = (key_len >> 3) # (n/8) = (n >> 3)
+        rand_bytes = self.random.randbytes(n_bytes)
 
         return rand_bytes
 

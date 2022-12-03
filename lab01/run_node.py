@@ -17,7 +17,7 @@ from hmac import SimpleHmacEncoder, UnexpectedMac
 config = json.load(open('config.json', 'r'))
 
 # the keys for server configurations
-SERVERS_CONFIG_DATA_KEYS = 'V_server, AS_TGS_server'.split(', ')
+SERVERS_CONFIG_DATA_KEYS = 'V_server, AS_TGS_server, CertificateAuthority'.split(', ')
 SERVER_DATA_KEYS = 'addr,port,charset'.split(',')
 # named tuple to store server configuration
 ServerData = namedtuple('ServerData', SERVER_DATA_KEYS)
@@ -27,7 +27,7 @@ servers_config_data = {
         for server in SERVERS_CONFIG_DATA_KEYS }
 
 # the keys for ode configurations
-NODE_CONFIG_DATA_KEYS = 'V_server, AS_TGS_server, C_client'.split(', ')
+NODE_CONFIG_DATA_KEYS = (SERVERS_CONFIG_DATA_KEYS + 'C_client'.split(', '))
 NODE_DATA_KEYS = 'prompt, connecting_status'.split(', ')
 # named tuple to store node configuration
 NodeData = namedtuple('NodeData', NODE_DATA_KEYS)

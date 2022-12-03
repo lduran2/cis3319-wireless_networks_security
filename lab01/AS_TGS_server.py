@@ -35,6 +35,33 @@ DES_KEY_SIZE = 8
 # the lifetimes of tickets
 Lifetimes = { 2: 60.0, 4: 86400.0 } # [s]
 
+
+def serveApplication(client_data, cauth_data, atgs_data):
+    pass
+
+
+def requestCertificate(client_data, cauth_data, atgs_data):
+    # create the Certificate Authority client
+    AD_c_ca = f'{cauth_data.addr}:{cauth_data.port}'
+    logging.info(f'connecting to {AD_c_ca} . . .')
+    caClient = Client(cauth_data.addr, cauth_data.port)
+
+    # (a) application server registration to obtain its public/private
+    # key pair and certificate
+    register_with_certificate_authority(caClient)
+
+
+def register_with_certificate_authority(client):
+    # (1Tx) S -> CA: RSA[PK_ca][K_tmpl||ID_s||TS1]
+    # create temporary key
+    K_tmpl = KeyManager().generate_key()
+    # get a time stamp
+    TS1 = time.time()
+    # create the registration
+    cert_registration = f'{K_tmpl}||{ID}||{TS1}'
+    # encode 
+
+
 def respondKerberos(node_data, server_data):
     # configure the logger
     logging.basicConfig(level=logging.INFO)

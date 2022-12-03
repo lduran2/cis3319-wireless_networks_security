@@ -6,7 +6,7 @@ import to_alpha
 
 DEBUG_MODE = False
 DEBUG_MODE_CODEC_GRAPH = False
-SEED_RANDOM = True
+SEED_RANDOM = False
 if (SEED_RANDOM):
     random.seed(42)
 
@@ -48,6 +48,7 @@ def main():
     # select the key
     n, e, d = selectKey()
     msg = ''
+    # REPL loop until exit() given
     while True:
         msg = input('rsa> ')
         if ('exit()'==msg):
@@ -334,4 +335,8 @@ def tupleindex(a_tuple, subtuple):
             return k
     raise ValueError('subtuple not found')
 
-main()
+# run the REPL test
+if __name__ == '__main__':
+    main()
+# end if __name__ == '__main__'
+
