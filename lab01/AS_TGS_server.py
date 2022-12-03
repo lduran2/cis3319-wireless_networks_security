@@ -2,12 +2,14 @@
 # standard libraries
 import logging
 import time
+from _thread import start_new_thread
+import traceback
 from sys import stderr
 from os import urandom
 
 # local library crypto
 import run_node
-from run_node import servers_config_data, nodes_config_data, config, KEY_CHARSET
+from run_node import servers_config_data, nodes_config_data, config, KEY_CHARSET, SENTINEL
 from run_node import PKca
 from crypto import KeyManager, DES
 import rsa
@@ -60,6 +62,32 @@ def serveApplication(client_data, cauth_data, atgs_data):
     respondKerberos(client_data, atgs_data)
 
 
+def clientRegistrationThread(atgsServer, callback, callback_args):
+    old_tb = None
+    exit_instruction = f'Type "{SENTINEL}" to exit: '
+    print(end=exit_instruction, flush=True)
+    # loop indefinitely
+    while True:
+        try:
+            print()
+            print()
+            callback(*callback_args)
+
+            # repeat the exit instruction
+            print(end=exit_instruction, flush=True)
+            # accept next connection
+            atgsServer.acceptNextConnection()
+        except Exception as e:
+            tb = traceback.format_exc()
+            # don't repeat the trackback
+            if (tb != old_tb):
+                print(file=stderr)
+                logging.error(tb)
+            old_tb = tb
+            print(end=exit_instruction, flush=True)
+    # end while True
+
+
 #######################################################################
 # PKI-based authentication
 #######################################################################
@@ -79,28 +107,47 @@ def requestCertificate(client_data, cauth_data, atgs_data):
         # close the node
         caClient.close()
 
-    AD_s_c = f'{atgs_data.addr}:{atgs_data.port}'
-    logging.info(f'connecting to {AD_s_c} . . .')
-    logging.info(f'{client_data.connecting_status} {AD_s_c} . . .')
+    AD_c = f'{atgs_data.addr}:{atgs_data.port}'
+    logging.info(f'{client_data.connecting_status} {AD_c} . . .')
     atgsServer = Server(atgs_data.addr, atgs_data.port)
 
-    try:
-        # (b) client registration: to obtain session key for further
-        # communication
-        receive_public_key_certificate_request(atgsServer)
-        send_public_key_certificate(atgsServer, PKs, Cert_s)
-        DES_tmp2, ID_c = receive_registration_information(atgsServer, SKs)
-        DES_sess = send_session_key(atgsServer, DES_tmp2, ID_c)
+    # listen for new client registrations
+    start_new_thread(clientRegistrationThread,
+        (atgsServer, clientRegistrationCallback,
+            (atgsServer, PKs, SKs, Cert_s, atgs_data.charset, AD_c)))
 
-        # (c) service request: to obtain application data
-        req = receive_service_data_request(atgsServer, DES_sess)
-        # if the request is incorrect, stop 
-        if (MEMO_REQ != req):
-            raise
-        send_service_data(atgsServer, DES_sess)
-    finally:
-        # close the node
-        atgsServer.close()
+    while True:
+        # TODO: your code here
+
+        # accept user input until SENTINEL given
+        msg_string = input()
+        if msg_string == SENTINEL:
+            break
+
+    # close the node
+    atgsServer.close()
+
+
+def clientRegistrationCallback(atgsServer, PKs, SKs, Cert_s, charset, AD_c):
+    # (b) client registration: to obtain session key for further
+    # communication
+    receive_public_key_certificate_request(atgsServer)
+    send_public_key_certificate(atgsServer, PKs, Cert_s)
+    DES_tmp2, ID_c = receive_registration_information(atgsServer, SKs)
+    DES_sess = send_session_key(atgsServer, DES_tmp2, ID_c)
+
+    # (c) service request: to obtain application data
+    req = receive_service_data_request(atgsServer, DES_sess)
+    # if the request is incorrect, stop 
+    if (MEMO_REQ != req):
+        raise
+    send_service_data(atgsServer, DES_sess)
+
+    # DES_sess is the key DES_c for the Kerberos
+    # get the other keys too
+    DES_tgs, DES_v = kerberos_keys()
+
+    kerberosCallback(atgsServer, charset, DES_sess, DES_tgs, DES_v, AD_c)
 
 
 def register_with_certificate_authority(client):
@@ -235,6 +282,12 @@ class BadRequest(Exception):
 # Kerberos
 #######################################################################
 
+def kerberosCallback(server, charset, DES_c, DES_tgs, DES_v, AD_c):
+    serve_authentication(server, charset, DES_c, DES_tgs, AD_c)
+    serve_ticket_granting(server, charset, DES_tgs, DES_v, AD_c)
+# end def respondKerberos(node_data, server_data)
+
+
 def respondKerberos(node_data, server_data):
     # configure the logger
     logging.basicConfig(level=logging.INFO)
@@ -244,26 +297,33 @@ def respondKerberos(node_data, server_data):
     logging.info(f'{node_data.connecting_status} {AD_c} . . .')
     server = Server(server_data.addr, server_data.port)
 
-    # read each key
-    # and create DES for Ktgs and Kc
-    DES_tgs, DES_c, DES_v = (DES(KeyManager.read_key(file))
-        for file in config['kerberos_keys'].values())
+    # read the default client key
+    DES_c = DES(KeyManager.read_key(config['kerberos_keys']['Kc_file']))
+    # get the other keys too
+    DES_tgs, DES_v = kerberos_keys()
 
-    # the Kerberos does not look because the implementation of server.Server is limited to 1 connection and only accepts the first
+    # listen for new client registrations
+    start_new_thread(clientRegistrationThread, (server, server_data.charset, DES_c, DES_tgs, DES_v, AD_c))
 
-    try:
-        # loop indefinitely
-        while True:
-            serve_authentication(server, server_data.charset, DES_c, DES_tgs, AD_c)
-            serve_ticket_granting(server, server_data.charset, DES_tgs, DES_v, AD_c)
-            # accept next connection
-            server.acceptNextConnection()
-        # end while True
-    finally:
-        # close the node
-        server.close()
+    while True:
+        # TODO: your code here
+
+        # accept user input until SENTINEL given
+        msg_string = input()
+        if msg_string == SENTINEL:
+            break
+
+    # close the node
+    server.close()
 # end def respondKerberos(node_data, server_data)
 
+
+def kerberos_keys():
+    # read each key
+    # and create DES for Ktgs and Kv
+    DES_tgs, DES_v = (DES(KeyManager.read_key(config['kerberos_keys'][file]))
+        for file in 'K_tgs_file, Kv_file'.split(', '))
+    return (DES_tgs, DES_v)
 
 def serve_authentication(server, charset, DES_c, DES_tgs, AD_c):
     # (a) authentication service exchange to obtain ticket granting-ticket
