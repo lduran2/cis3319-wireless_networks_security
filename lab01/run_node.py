@@ -14,6 +14,14 @@ from crypto import KeyManager, DES, CharacterEncoder, bit2hex
 from node import Node
 from hmac import SimpleHmacEncoder, UnexpectedMac
 
+# functions used in configuration
+def str2key(string):
+    return RsaKey(*split2keys(string.split(',')))
+def split2keys(split):
+    return tuple(int(k) for k in split)
+def split_rsa_key_pair(rsa_key_pair):
+    return (RsaKey(*ca_key[:2]), RsaKey(*ca_key[::2]))
+
 # load configuration
 config = json.load(open('config.json', 'r'))
 
@@ -41,17 +49,18 @@ nodes_config_data = {
 # ENC_FILE holds the default key for DES used in main
 #   However, the Kerberos generates its own shared key.
 # MAC_FILE holds the key for SHA256 used in hashing the MAC authentication.
-ENC_FILE, MAC_FILE = (
-    config['node'][key] for key in ('enc_key_file', 'mac_key_file'))
+ENC_FILE, MAC_FILE, CA_FILE = (
+    config['node'][key] for key in 'enc_key_file, mac_key_file, ca_key_file'.split(', '))
 # load string that ends the input stream
 SENTINEL = config['node']['sentinel']
 
 # named tuple to store public key data
-PublicKey = namedtuple('PublicKey', tuple('ne'))
+RsaKey = namedtuple('RsaKey', tuple('nk'))
 # get the certificate authority public key
-with open('PKca.txt', newline='') as csvfile:
+with open(CA_FILE, newline='') as csvfile:
     inr = csv.reader(csvfile, delimiter=',')
-    PKca = PublicKey(*(int(k) for k in tuple(inr)[0]))
+    ca_key = split2keys(tuple(inr)[0])
+PKca, SKca = split_rsa_key_pair(ca_key)
 
 # Python uses Latin-1 for Pickles, so it's good enough to encode keys
 KEY_CHARSET = 'Latin-1'

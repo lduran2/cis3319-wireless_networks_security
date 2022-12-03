@@ -7,7 +7,8 @@ from os import urandom
 
 # local library crypto
 import run_node
-from run_node import servers_config_data, nodes_config_data, config, KEY_CHARSET, PKca
+from run_node import servers_config_data, nodes_config_data, config, KEY_CHARSET
+from run_node import PKca, str2key
 from crypto import KeyManager, DES
 import rsa
 from node import Node
@@ -42,8 +43,13 @@ Lifetimes = { 2: 60.0, 4: 86400.0 } # [s]
 
 def serveApplication(client_data, cauth_data, atgs_data):
     requestCertificate(client_data, cauth_data, atgs_data)
+    return
     respondKerberos(client_data, atgs_data)
 
+
+#######################################################################
+# PKI-based authentication
+#######################################################################
 
 def requestCertificate(client_data, cauth_data, atgs_data):
     # create the Certificate Authority client
@@ -53,23 +59,52 @@ def requestCertificate(client_data, cauth_data, atgs_data):
 
     # (a) application server registration to obtain its public/private
     # key pair and certificate
-    register_with_certificate_authority(caClient)
+    DES_tmpl = register_with_certificate_authority(caClient)
+    PKs, Cert_s = receive_certificate(caClient, DES_tmpl)
 
 
 def register_with_certificate_authority(client):
-    # (1Tx) S -> CA: RSA[PKca][K_tmpl||ID_s||TS1]
+    # (1Tx) S -> CA:    RSA[PKca][K_tmpl||ID_s||TS1]
     # create temporary key
     K_tmpl_byts = KeyManager().generate_key()
     K_tmpl_str = K_tmpl_byts.decode(KEY_CHARSET)
+    # create its DES object
+    DES_tmpl = DES(K_tmpl_byts)
     # get a time stamp
     TS1 = time.time()
     # create the registration
     plain_cert_registration = f'{K_tmpl_str}||{ID}||{TS1}'
     # encode the registration
     cipher_cert_registration = rsa.encode(*PKca, plain_cert_registration)
-    print(f'(a1) AS encrypted {cipher_cert_registration}')
-    print(f'(a1) AS generated {K_tmpl_byts}')
+    print(f'(a1) AS encoded: {cipher_cert_registration}')
+    print(f'(a1) AS generated: {K_tmpl_byts}')
+    print()
+    # encode and send the message
+    client.send(cipher_cert_registration.encode(KEY_CHARSET))
+    return DES_tmpl
 
+
+def receive_certificate(caClient, DES_tmpl):
+    # (2Rx) CA -> S:    DES[K_tmpl][PKs||SKs||Cert_s||ID_s||TS2] s.t.
+    #       Cert_s = Sign[SKca][ID_s||ID_ca||PKs]
+    # receive the DES message
+    msg_cipher = run_node.recv_blocking(caClient)
+    print(f'(a2) S Received encrypted: {msg_cipher}')
+    # decrypt the message
+    msg_chars = DES_tmpl.decrypt(msg_cipher)
+    # split the messge
+    PKs_str, SKs_str, Cert_s_cipher, ID_s, TS2 = msg_chars.split('||')
+    # parse keys
+    PKs = str2key(PKs_str)
+    SKs = str2key(SKs_str)
+    print(''.join((f'(a2) S found keys: ', str({'PKs': PKs, 'SKs': SKs}))))
+    print(f'(a2) S found certificate: {Cert_s_cipher}')
+    return PKs, Cert_s_cipher
+
+
+#######################################################################
+# Kerberos
+#######################################################################
 
 def respondKerberos(node_data, server_data):
     # configure the logger

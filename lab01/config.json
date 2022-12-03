@@ -2,7 +2,7 @@
     "node": {
         "enc_key_file": "enc_key.txt",
         "mac_key_file": "mac_key.txt",
-        "ca_key_file": "PKca.txt",
+        "ca_key_file": "ca_key.txt",
         "sentinel": "exit"
     },
     "kerberos_keys": {

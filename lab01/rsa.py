@@ -86,7 +86,7 @@ def encode(n: int, e: int, msg: str) -> str:
         # accumulate the output
         outgraphs_acc.extend(outgraph_chrs)
     # join the output into a string and return it
-    ciphertext = str.join('', outgraphs_acc)
+    ciphertext = ''.join(outgraphs_acc)
     return ciphertext
 
 def decode(n: int, d: int, msg: str) -> str:
@@ -271,7 +271,7 @@ def str2ords(string):
     return (ord(c) for c in string)
 
 def ords2str(ords):
-    return str.join('', (chr(o) for o in ords))
+    return ''.join(chr(o) for o in ords)
 
 def splitModIndex(v, n):
     return (v[k:(k + n)] for k in range(0, len(v), n))
