@@ -55,6 +55,8 @@ Lifetimes = {
     SESS: 86400.0
 } # [in seconds]
 
+EXIT_INSTRUCTION = f'Type "{SENTINEL}" to exit: '
+
 
 def serveApplication(client_data, cauth_data, atgs_data):
     requestCertificate(client_data, cauth_data, atgs_data)
@@ -64,8 +66,7 @@ def serveApplication(client_data, cauth_data, atgs_data):
 
 def clientRegistrationThread(atgsServer, callback, callback_args):
     old_tb = None
-    exit_instruction = f'Type "{SENTINEL}" to exit: '
-    print(end=exit_instruction, flush=True)
+    print(end=EXIT_INSTRUCTION, flush=True)
     # loop indefinitely
     while True:
         try:
@@ -74,7 +75,7 @@ def clientRegistrationThread(atgsServer, callback, callback_args):
             callback(*callback_args)
 
             # repeat the exit instruction
-            print(end=exit_instruction, flush=True)
+            print(end=EXIT_INSTRUCTION, flush=True)
             # accept next connection
             atgsServer.acceptNextConnection()
         except Exception as e:
@@ -84,7 +85,7 @@ def clientRegistrationThread(atgsServer, callback, callback_args):
                 print(file=stderr)
                 logging.error(tb)
             old_tb = tb
-            print(end=exit_instruction, flush=True)
+            print(end=EXIT_INSTRUCTION, flush=True)
     # end while True
 
 
@@ -129,6 +130,10 @@ def requestCertificate(client_data, cauth_data, atgs_data):
 
 
 def clientRegistrationCallback(atgsServer, PKs, SKs, Cert_s, charset, AD_c):
+    print('###############################################################')
+    print('# PKI-based authentication')
+    print('###############################################################')
+
     # (b) client registration: to obtain session key for further
     # communication
     receive_public_key_certificate_request(atgsServer)
@@ -147,6 +152,10 @@ def clientRegistrationCallback(atgsServer, PKs, SKs, Cert_s, charset, AD_c):
     # get the other keys too
     DES_tgs, DES_v = kerberos_keys()
 
+    # repeat exit message while waiting for kerberos
+    print(end=EXIT_INSTRUCTION)
+    print()
+    print()
     kerberosCallback(atgsServer, charset, DES_sess, DES_tgs, DES_v, AD_c)
 
 
@@ -282,12 +291,6 @@ class BadRequest(Exception):
 # Kerberos
 #######################################################################
 
-def kerberosCallback(server, charset, DES_c, DES_tgs, DES_v, AD_c):
-    serve_authentication(server, charset, DES_c, DES_tgs, AD_c)
-    serve_ticket_granting(server, charset, DES_tgs, DES_v, AD_c)
-# end def respondKerberos(node_data, server_data)
-
-
 def respondKerberos(node_data, server_data):
     # configure the logger
     logging.basicConfig(level=logging.INFO)
@@ -315,6 +318,16 @@ def respondKerberos(node_data, server_data):
 
     # close the node
     server.close()
+# end def respondKerberos(node_data, server_data)
+
+
+def kerberosCallback(server, charset, DES_c, DES_tgs, DES_v, AD_c):
+    print('###############################################################')
+    print('# Kerberos')
+    print('###############################################################')
+
+    serve_authentication(server, charset, DES_c, DES_tgs, AD_c)
+    serve_ticket_granting(server, charset, DES_tgs, DES_v, AD_c)
 # end def respondKerberos(node_data, server_data)
 
 

@@ -33,6 +33,10 @@ V_SERVER, AS_TGS_SERVER, CERTIFICATE_AUTHORITY = (
 CLIENT = nodes_config_data[SECTION]
 
 
+#######################################################################
+# PKI-based authentication
+#######################################################################
+
 def requestServers(client_data, cauth_data, atgs_data, v_server_data):
     # configure the logger
     logging.basicConfig(level=logging.INFO)
@@ -42,17 +46,32 @@ def requestServers(client_data, cauth_data, atgs_data, v_server_data):
     logging.info(f'{client_data.connecting_status} {AD_c_tsg} . . .')
     atgsClient = Client(atgs_data.addr, atgs_data.port)
 
-    requestClientRegistrationService(atgsClient)
+    print('###############################################################')
+    print('# PKI-based authentication')
+    print('###############################################################')
 
-    return
+    # perform PKI-based authentication
+    DES_sess = requestClientRegistrationService(atgsClient)
+
+    print('Message received!  Please press enter to perform Kerberos authentication.', file=stderr, flush=True)
+    input(client_data.prompt)
+
+    print('###############################################################')
+    print('# Kerberos')
+    print('###############################################################')
 
     # request the Kerberos authetication
-    is_kerberos_authenticated = requestKerberos(atgsClient, client_data.connecting_status, atgs_data, v_server_data)
+    kerberos_authentication = request_kerberos(
+        atgsClient, client_data.connecting_status, atgs_data, DES_sess, AD_c_tsg, v_server_data)
     # stop if not authenticated
     if (not(kerberos_authentication)):
         return
     # otherwise, this fetch the client and its DES key
     vClient, DES_c_v = kerberos_authentication
+
+    print('###############################################################')
+    print('# Logged into chat server')
+    print('###############################################################')
 
     # encrypt and send user input, decrypt messages received
     # use DES_c_v as the DES encrypter, not enc_key
@@ -61,10 +80,6 @@ def requestServers(client_data, cauth_data, atgs_data, v_server_data):
     vClient.close()
 # end def requestServers()
 
-
-#######################################################################
-# PKI-based authentication
-#######################################################################
 
 def requestClientRegistrationService(client):
     # (b) client registration: to obtain session key for further
@@ -77,6 +92,9 @@ def requestClientRegistrationService(client):
     # (c) service request: to obtain application data
     request_service_data(client, DES_sess)
     receive_service_data_request(client, DES_sess)
+
+    # return DES_sess for the Kerberos
+    return DES_sess
 
 
 def request_server_public_key_certificate(client):
@@ -201,10 +219,20 @@ class IncorrectPublicKey(Exception):
 # Kerberos
 #######################################################################
 
-def requestKerberos(atgsClient, connecting_status, atgs_data, v_server_data):
+def mainRequestKerberos(atgsClient, connecting_status, atgs_data):
+    '''
+    Runs Kerberos with the default key DES_c.
+    '''
+    # read the key and create DES for C/AS
+    DES_c = DES(KeyManager.read_key(config['kerberos_keys']['Kc_file']))
+
+
+def request_kerberos(atgsClient, connecting_status, atgs_data, DES_c, AD_c_tsg, v_server_data):
+
+
     # (a) authentication service exchange to obtain ticket granting-ticket
     request_ticket_granting_ticket(atgsClient, atgs_data.charset)
-    DES_c_tgs, Ticket_tgs = receive_ticket_granting_ticket(atgsClient)
+    DES_c_tgs, Ticket_tgs = receive_ticket_granting_ticket(atgsClient, DES_c)
 
     # (b) ticket-granting service exchange to obtain service-granting ticket
     request_with_authenticator(atgsClient, atgs_data.charset, ID_v, Ticket_tgs, DES_c_tgs, AD_c_tsg)
@@ -251,10 +279,7 @@ def request_ticket_granting_ticket(client, atgs_charset):
 # end def request_ticket_granting_ticket(client, atgs_charset)
 
 
-def receive_ticket_granting_ticket(client):
-    # read the key and create DES for C/AS
-    DES_c = DES(KeyManager.read_key(config['kerberos_keys']['Kc_file']))
-
+def receive_ticket_granting_ticket(client, DES_c):
     # (2Rx) AS -> C:    E(Kc, [K_c_tgs || ID_tgs || TS2 || Lifetime2 || Ticket_tgs])
 
     # receive the message
