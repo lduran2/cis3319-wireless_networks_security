@@ -2,18 +2,20 @@
 # standard libraries
 import logging
 import time
+from _thread import start_new_thread
+import traceback
 
 # local library crypto
 import run_node
-from run_node import servers_config_data, nodes_config_data, config, KEY_CHARSET
-from run_node import SKca, split_rsa_key_pair
+from run_node import servers_config_data, nodes_config_data, config, KEY_CHARSET, SENTINEL
+from run_node import SKca
 from crypto import KeyManager, DES
 import rsa
 from node import Node
 from server import Server
 
-# ID for this node
-ID = "CIS3319CAID"
+# ID for this node in PKI
+ID_pki = 'ID-CA'
 
 # corresponding section in configuration file
 SECTION = 'CertificateAuthority'
@@ -27,18 +29,53 @@ NODE = nodes_config_data[SECTION]
 # Sign(.) is RSA signature generation with the specified private key
 
 
+def receiveThread(server):
+    exit_instruction = f'Type "{SENTINEL}" to exit: '
+    print(end=exit_instruction, flush=True)
+    try:
+        # loop indefinitely
+        while True:
+            print()
+            print()
+            # (a) application server registration to obtain its public/private
+            DES_tmpl, ID_s = receive_certificate_registration(server)
+            send_certificate(server, DES_tmpl, ID_s)
+
+            # repeat the exit instruction
+            print(end=exit_instruction, flush=True)
+            # accept next connection
+            server.acceptNextConnection()
+        # end while True
+    except Exception as e:
+        tb = traceback.format_exc()
+        # don't repeat the trackback
+        if (tb != old_tb):
+            print(file=stderr)
+            logging.error(tb)
+        old_tb = tb
+    finally:
+        # close the node
+        server.close()
+
+
 def respondCertification(node_data, server_data):
     # configure the logger
     logging.basicConfig(level=logging.INFO)
 
     # create the Certificate Authority server
-    AD_c = f'{server_data.addr}:{server_data.port}'
-    logging.info(f'{node_data.connecting_status} {AD_c} . . .')
+    AD_ca = f'{server_data.addr}:{server_data.port}'
+    logging.info(f'{node_data.connecting_status} {AD_ca} . . .')
     server = Server(server_data.addr, server_data.port)
 
-    # (a) application server registration to obtain its public/private
-    DES_tmpl, ID_s = receive_certificate_registration(server)
-    send_certificate(server, DES_tmpl, ID_s)
+    start_new_thread(receiveThread, (server,))
+
+    while True:
+        # TODO: your code here
+
+        # accept user input until SENTINEL given
+        msg_string = input()
+        if msg_string == SENTINEL:
+            break
 
 
 def receive_certificate_registration(server):
@@ -63,11 +100,11 @@ def send_certificate(server, DES_tmpl, ID_s):
     #       Cert_s = Sign[SKca][ID_s||ID_ca||PKs]
     # select a key for Application server AS
     key_s = rsa.selectKey()
-    PKs, SKs = split_rsa_key_pair(key_s)
+    PKs, SKs = rsa.split_key_pair(key_s)
     # convert to strings
-    PKs_str, SKs_str = (rsaKey2str(k) for k in (PKs, SKs))
+    PKs_str, SKs_str = (rsa.key2str(k) for k in (PKs, SKs))
     # create the certificate Cert_s
-    Cert_s_plain = f'{ID_s}||{ID}||{PKs_str}'
+    Cert_s_plain = f'{ID_s}||{ID_pki}||{PKs_str}'
     Cert_s_cipher = rsa.encode(*SKca, Cert_s_plain)
     # get a time stamp
     TS2 = time.time()
@@ -80,10 +117,6 @@ def send_certificate(server, DES_tmpl, ID_s):
     print()
     # send the message (already in bytes)
     server.send(certificate_msg_cipher)
-
-
-def rsaKey2str(rsaKey):
-    return (','.join(str(f) for f in rsaKey))
 
 
 # run the server until SENTINEL is given

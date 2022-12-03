@@ -8,14 +8,18 @@ from sys import stderr
 import run_node
 from run_node import servers_config_data, nodes_config_data, config, KEY_CHARSET
 from crypto import KeyManager, DES
+import rsa
 from client import Client
 from ticket import TICKET_EXPIRED
-from AS_TGS_server import ID as ID_tgs
+from AS_TGS_server import ID_ker as ID_tgs, ID_pki as ID_s
 from V_server import ID as ID_v
 
 
-# ID for this node
-ID = 'CIS3319USERID'
+# ID for this node in Kerberos
+ID_ker = 'CIS3319USERID'
+# ID for this node in PKI
+ID_pki = 'ID-Client'
+
 
 # corresponding section in configuration file
 SECTION = 'C_client'
@@ -30,8 +34,17 @@ def requestServers(client_data, cauth_data, atgs_data, v_server_data):
     # configure the logger
     logging.basicConfig(level=logging.INFO)
 
+    # create the Kerberos client
+    AD_c_tsg = f'{atgs_data.addr}:{atgs_data.port}'
+    logging.info(f'{client_data.connecting_status} {AD_c_tsg} . . .')
+    atgsClient = Client(atgs_data.addr, atgs_data.port)
+
+    requestSessionKey(atgsClient)
+
+    return
+
     # request the Kerberos authetication
-    is_kerberos_authenticated = requestKerberos(client_data, atgs_data, v_server_data)
+    is_kerberos_authenticated = requestKerberos(atgsClient, client_data.connecting_status, atgs_data, v_server_data)
     # stop if not authenticated
     if (not(kerberos_authentication)):
         return
@@ -46,12 +59,51 @@ def requestServers(client_data, cauth_data, atgs_data, v_server_data):
 # end def requestServers()
 
 
-def requestKerberos(client_data, atgs_data, v_server_data):
-    # create the Kerberos client
-    AD_c_tsg = f'{atgs_data.addr}:{atgs_data.port}'
-    logging.info(f'{client_data.connecting_status} {AD_c_tsg} . . .')
-    atgsClient = Client(atgs_data.addr, atgs_data.port)
+#######################################################################
+# PKI-based authentication
+#######################################################################
 
+def requestSessionKey(client):
+    # (b) client registration: to obtain session key for further
+    # communication
+    request_server_public_key_certificate(client)
+    PKs, Cert_s = send_public_key_certificate(client)
+    send_registration_information(PKs, Cert_s)
+
+
+def request_server_public_key_certificate(client):
+    # (3Tx) C -> S:     ID_s||TS3
+    # get a time stamp
+    TS3 = time.time()
+    # create the registration
+    plain_client_registration = f'{ID_s}||{TS3}'
+    print(f'(b3) C sending: {plain_client_registration}')
+    print()
+    # encode and send the message
+    client.send(plain_client_registration.encode(KEY_CHARSET))
+
+
+def send_public_key_certificate(client):
+    # (4Rx): S -> C:    PKs||Cert_s||TS4
+    msg = run_node.recv_blocking(client).decode(KEY_CHARSET)
+    print(f'(b4) C Received: {msg}')
+    print()
+    # split the messge
+    PKs_str, Cert_s, TS4 = msg.split('||')
+    # parse keys
+    PKs = rsa.str2key(PKs_str)
+    return PKs, Cert_s
+
+
+def send_registration_information(PKs, Cert_s):
+    pass
+
+
+#######################################################################
+# Kerberos
+#######################################################################
+
+def requestKerberos(atgsClient, connecting_status, atgs_data, v_server_data):
     # (a) authentication service exchange to obtain ticket granting-ticket
     request_ticket_granting_ticket(atgsClient, atgs_data.charset)
     DES_c_tgs, Ticket_tgs = receive_ticket_granting_ticket(atgsClient)
@@ -71,7 +123,7 @@ def requestKerberos(client_data, atgs_data, v_server_data):
 
     # create the chat client
     print(file=stderr)
-    logging.info(f'{client_data.connecting_status} {v_server_data.addr}:{v_server_data.port} . . .')
+    logging.info(f'{connecting_status} {v_server_data.addr}:{v_server_data.port} . . .')
     vClient = Client(v_server_data.addr, v_server_data.port)
 
     # (c) client/server authentication exchange to obtain service
@@ -86,7 +138,7 @@ def requestKerberos(client_data, atgs_data, v_server_data):
         return False
 
     return (vClient, DES_c_v)
-# end def requestKerberos(client_data, atgs_data, v_server_data)
+# end def requestKerberos(connecting_status, atgs_data, v_server_data)
 
 
 def request_ticket_granting_ticket(client, atgs_charset):
@@ -94,7 +146,7 @@ def request_ticket_granting_ticket(client, atgs_charset):
     # get a time stamp
     TS1 = time.time()
     # create the client authentication
-    client_auth = f'{ID}||{ID_tgs}||{TS1}'
+    client_auth = f'{ID_ker}||{ID_tgs}||{TS1}'
     # send the client authentication message
     client_auth_bytes = client_auth.encode(atgs_charset)
     client.send(client_auth_bytes)
@@ -131,7 +183,7 @@ def request_with_authenticator(client, charset, next_server_ID, Ticket, des_shar
     TS = time.time()
 
     # create the authenticator
-    plain_Authenticator_c = f'{ID}||{AD_c_tsg}||{TS}'
+    plain_Authenticator_c = f'{ID_ker}||{AD_c_tsg}||{TS}'
     # encrypt the authenticator
     cipher_Authenticator_c_byts = des_shared_c.encrypt(plain_Authenticator_c)
     # convert to string

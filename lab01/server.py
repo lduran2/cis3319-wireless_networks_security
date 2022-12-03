@@ -19,12 +19,21 @@ class Server:
         # create and store the node
         self.node = Node(addr, port, Server.bindListenAccept, buffer_size)
 
+    def acceptNextConnection(self):
+        # allow for more connections
+        Server.acceptNextConnectionOnNode(self.node)
+
     @staticmethod
     def bindListenAccept(node: Node):
         # bind it to the address whereat to listen
         node.s.bind((node.addr, node.port))
         # start listening
         node.s.listen(Server.MAX_N_CONNS)
+        # accept first connection
+        Server.acceptNextConnectionOnNode(node)
+
+    @staticmethod
+    def acceptNextConnectionOnNode(node: Node):
         # store the connected socket and update the address
         node.conn, node.addr = node.s.accept()
 

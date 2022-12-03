@@ -3,6 +3,7 @@ from math import gcd
 from collections import deque
 from itertools import chain
 import to_alpha
+from collections import namedtuple
 
 DEBUG_MODE = False
 DEBUG_MODE_CODEC_GRAPH = False
@@ -334,6 +335,22 @@ def tupleindex(a_tuple, subtuple):
         if (a_tuple[k:(k + sublen)]==subtuple):
             return k
     raise ValueError('subtuple not found')
+
+# named tuple to store public key data
+RsaKey = namedtuple('RsaKey', tuple('nk'))
+
+# functions used to convert between strings, keys
+def str2key(string):
+    return RsaKey(*ints(string.split(',')))
+
+def ints(strs):
+    return tuple(int(k) for k in strs)
+
+def split_key_pair(pair):
+    return (RsaKey(*pair[:2]), RsaKey(*pair[::2]))
+
+def key2str(rsaKey):
+    return (','.join(str(f) for f in rsaKey))
 
 # run the REPL test
 if __name__ == '__main__':

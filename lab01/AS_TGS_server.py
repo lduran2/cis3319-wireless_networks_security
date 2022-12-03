@@ -8,7 +8,7 @@ from os import urandom
 # local library crypto
 import run_node
 from run_node import servers_config_data, nodes_config_data, config, KEY_CHARSET
-from run_node import PKca, str2key
+from run_node import PKca
 from crypto import KeyManager, DES
 import rsa
 from node import Node
@@ -22,8 +22,10 @@ FAIL_TS2 = False
 FAIL_TS4 = False
 
 
-# ID for this node
-ID = "CIS3319TGSID"
+# ID for this node in Kerberos
+ID_ker = 'CIS3319TGSID'
+# ID for this node in PKI
+ID_pki = 'ID-Server'
 
 # corresponding section in configuration file
 SECTION = 'AS_TGS_server'
@@ -53,14 +55,32 @@ def serveApplication(client_data, cauth_data, atgs_data):
 
 def requestCertificate(client_data, cauth_data, atgs_data):
     # create the Certificate Authority client
-    AD_c_ca = f'{cauth_data.addr}:{cauth_data.port}'
-    logging.info(f'connecting to {AD_c_ca} . . .')
+    AD_s_ca = f'{cauth_data.addr}:{cauth_data.port}'
+    logging.info(f'connecting to {AD_s_ca} . . .')
     caClient = Client(cauth_data.addr, cauth_data.port)
 
-    # (a) application server registration to obtain its public/private
-    # key pair and certificate
-    DES_tmpl = register_with_certificate_authority(caClient)
-    PKs, Cert_s = receive_certificate(caClient, DES_tmpl)
+    try:
+        # (a) application server registration to obtain its public/private
+        # key pair and certificate
+        DES_tmpl = register_with_certificate_authority(caClient)
+        PKs, Cert_s = receive_certificate(caClient, DES_tmpl)
+    finally:
+        # close the node
+        caClient.close()
+
+    AD_s_c = f'{atgs_data.addr}:{atgs_data.port}'
+    logging.info(f'connecting to {AD_s_c} . . .')
+    logging.info(f'{client_data.connecting_status} {AD_s_c} . . .')
+    atgsServer = Server(atgs_data.addr, atgs_data.port)
+
+    try:
+        # (b) client registration: to obtain session key for further
+        # communication
+        receive_public_key_certificate_request(atgsServer)
+        send_public_key_certificate(atgsServer, PKs, Cert_s)
+    finally:
+        # close the node
+        atgsServer.close()
 
 
 def register_with_certificate_authority(client):
@@ -73,7 +93,7 @@ def register_with_certificate_authority(client):
     # get a time stamp
     TS1 = time.time()
     # create the registration
-    plain_cert_registration = f'{K_tmpl_str}||{ID}||{TS1}'
+    plain_cert_registration = f'{K_tmpl_str}||{ID_pki}||{TS1}'
     # encode the registration
     cipher_cert_registration = rsa.encode(*PKca, plain_cert_registration)
     print(f'(a1) AS encoded: {cipher_cert_registration}')
@@ -84,22 +104,43 @@ def register_with_certificate_authority(client):
     return DES_tmpl
 
 
-def receive_certificate(caClient, DES_tmpl):
+def receive_certificate(client, DES_tmpl):
     # (2Rx) CA -> S:    DES[K_tmpl][PKs||SKs||Cert_s||ID_s||TS2] s.t.
     #       Cert_s = Sign[SKca][ID_s||ID_ca||PKs]
     # receive the DES message
-    msg_cipher = run_node.recv_blocking(caClient)
+    msg_cipher = run_node.recv_blocking(client)
     print(f'(a2) S Received encrypted: {msg_cipher}')
     # decrypt the message
     msg_chars = DES_tmpl.decrypt(msg_cipher)
     # split the messge
     PKs_str, SKs_str, Cert_s_cipher, ID_s, TS2 = msg_chars.split('||')
     # parse keys
-    PKs = str2key(PKs_str)
-    SKs = str2key(SKs_str)
+    PKs = rsa.str2key(PKs_str)
+    SKs = rsa.str2key(SKs_str)
     print(''.join((f'(a2) S found keys: ', str({'PKs': PKs, 'SKs': SKs}))))
     print(f'(a2) S found certificate: {Cert_s_cipher}')
     return PKs, Cert_s_cipher
+
+
+def receive_public_key_certificate_request(server):
+    # (3Rx): C -> S:     ID_s||TS3
+    msg = run_node.recv_blocking(server).decode(KEY_CHARSET)
+    print(f'(b3) S Received: {msg}')
+    print()
+
+def send_public_key_certificate(server, PKs, Cert_s):
+    # (4Tx): S -> C:    PKs||Cert_s||TS4
+    # get a time stamp
+    TS4 = time.time()
+    # convert the key to string
+    PKs_str = rsa.key2str(PKs)
+    # create the message
+    plain_key_cert = f'{PKs_str}||{Cert_s}||{TS4}'
+    print(f'(b3) S sending: {plain_key_cert}')
+    print()
+    # encode and send the message
+    server.send(plain_key_cert.encode(KEY_CHARSET))
+
 
 
 #######################################################################
@@ -120,11 +161,15 @@ def respondKerberos(node_data, server_data):
     DES_tgs, DES_c, DES_v = (DES(KeyManager.read_key(file))
         for file in config['kerberos_keys'].values())
 
+    # the Kerberos does not look because the implementation of server.Server is limited to 1 connection and only accepts the first
+
     try:
         # loop indefinitely
         while True:
             serve_authentication(server, server_data.charset, DES_c, DES_tgs, AD_c)
             serve_ticket_granting(server, server_data.charset, DES_tgs, DES_v, AD_c)
+            # accept next connection
+            server.acceptNextConnection()
         # end while True
     finally:
         # close the node
@@ -173,9 +218,9 @@ def receive_ticket_granting_ticket_request(server, charset):
 
 def send_ticket_granting_ticket(server, DES_c, DES_tgs, ID_c, AD_c):
     # (2Tx) AS -> C:    E(Kc, [K_c_tgs || ID_tgs || TS2 || Lifetime2 || Ticket_tgs])
-    K_c_tgs_chars, TS2, Ticket_tgs = create_ticket(server, DES_tgs, ID_c, AD_c, ID, FAIL_TS2, Lifetimes[2])
+    K_c_tgs_chars, TS2, Ticket_tgs = create_ticket(server, DES_tgs, ID_c, AD_c, ID_ker, FAIL_TS2, Lifetimes[2])
     # concatenate the message
-    plain_shared_key_ticket = f'{K_c_tgs_chars}||{ID}||{TS2}||{Lifetimes[2]}||{Ticket_tgs}'
+    plain_shared_key_ticket = f'{K_c_tgs_chars}||{ID_ker}||{TS2}||{Lifetimes[2]}||{Ticket_tgs}'
     # encrypt the message
     cipher_shared_key_ticket = DES_c.encrypt(plain_shared_key_ticket)
     # send it

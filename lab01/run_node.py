@@ -6,6 +6,7 @@ import traceback
 from sys import stderr
 from _thread import start_new_thread
 from collections import namedtuple
+import rsa
 import csv
 
 
@@ -13,14 +14,6 @@ import csv
 from crypto import KeyManager, DES, CharacterEncoder, bit2hex
 from node import Node
 from hmac import SimpleHmacEncoder, UnexpectedMac
-
-# functions used in configuration
-def str2key(string):
-    return RsaKey(*split2keys(string.split(',')))
-def split2keys(split):
-    return tuple(int(k) for k in split)
-def split_rsa_key_pair(rsa_key_pair):
-    return (RsaKey(*ca_key[:2]), RsaKey(*ca_key[::2]))
 
 # load configuration
 config = json.load(open('config.json', 'r'))
@@ -54,13 +47,11 @@ ENC_FILE, MAC_FILE, CA_FILE = (
 # load string that ends the input stream
 SENTINEL = config['node']['sentinel']
 
-# named tuple to store public key data
-RsaKey = namedtuple('RsaKey', tuple('nk'))
 # get the certificate authority public key
 with open(CA_FILE, newline='') as csvfile:
     inr = csv.reader(csvfile, delimiter=',')
-    ca_key = split2keys(tuple(inr)[0])
-PKca, SKca = split_rsa_key_pair(ca_key)
+    ca_key = rsa.ints(tuple(inr)[0])
+PKca, SKca = rsa.split_key_pair(ca_key)
 
 # Python uses Latin-1 for Pickles, so it's good enough to encode keys
 KEY_CHARSET = 'Latin-1'
