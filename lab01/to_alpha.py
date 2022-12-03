@@ -117,6 +117,7 @@ def alpha2ords(alpha):
             code_acc = a
             # next character is even
             i_code += 1
+        # end if (escape_mode)
         else:
         # if in alphabetic mode
             # if previous character was Z
@@ -138,5 +139,7 @@ def alpha2ords(alpha):
             yield a
             prevZ = False
     # if there is a Z to send, send it
+    # for a in alpha
     if (prevZ):
         yield ordZ
+# end def alpha2ords(alpha)
